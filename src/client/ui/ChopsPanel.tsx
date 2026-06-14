@@ -84,7 +84,7 @@ export function ChopsPanel({
             </div>
           </div>
         ))}
-        {!orderedChops.length && <p className="empty">Drag on the waveform or press New chop to create a region, then resize its edges.</p>}
+        {!orderedChops.length && <p className="empty">Press New chop to create a region at the playhead, then resize its edges.</p>}
       </div>
     </section>
   );

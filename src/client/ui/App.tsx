@@ -30,11 +30,15 @@ export function App() {
           barBeat={state.barBeat}
           currentTime={state.currentTime}
           duration={state.duration}
+          autoScrollPlayhead={state.autoScrollPlayhead}
           hasSource={Boolean(state.detail)}
           isPlaying={state.isPlaying}
           ticks={state.ticks}
+          timelineScrollLeft={state.timelineScrollLeft}
+          timelineWidth={state.timelineWidth}
           waveformRef={state.waveformRef}
           zoom={state.zoom}
+          onSetAutoScrollPlayhead={actions.setAutoScrollPlayhead}
           onSetZoom={actions.setZoom}
           onTogglePlayback={actions.togglePlayback}
         />

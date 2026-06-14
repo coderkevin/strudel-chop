@@ -23,7 +23,10 @@ export function useWaveformEditor({
 }: UseWaveformEditorOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loopSelected, setLoopSelected] = useState(false);
+  const [autoScrollPlayhead, setAutoScrollPlayhead] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
+  const [timelineScrollLeft, setTimelineScrollLeft] = useState(0);
+  const [timelineWidth, setTimelineWidth] = useState(1);
   const [isWaveformReady, setIsWaveformReady] = useState(false);
   const [zoom, setZoom] = useState(60);
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -46,6 +49,8 @@ export function useWaveformEditor({
       container: waveformRef.current,
       url: detail.sourceUrl,
       height: 220,
+      autoScroll: autoScrollPlayhead,
+      interact: false,
       waveColor: '#7c8796',
       progressColor: '#1f2937',
       cursorColor: 'transparent',
@@ -62,6 +67,7 @@ export function useWaveformEditor({
     wavesurfer.on('ready', () => {
       drawRegions(detail.sourceMetadata.chops);
       wavesurfer.zoom(zoom);
+      syncTimelineMetrics(wavesurfer);
       setIsWaveformReady(true);
       setStatus(`Loaded ${detail.sourceMetadata.originalName}`);
     });
@@ -72,25 +78,6 @@ export function useWaveformEditor({
 
     regions.on('region-created', (region) => {
       regionMapRef.current.set(region.id, region);
-      const current = sourceMetadataRef.current;
-
-      if (current && !current.chops.some((chop) => chop.id === region.id)) {
-        const order = current.chops.length;
-        updateSourceMetadata((metadata) => ({
-          ...metadata,
-          chops: [
-            ...metadata.chops,
-            {
-              id: region.id,
-              name: `chop ${order + 1}`,
-              start: region.start,
-              end: region.end,
-              order
-            }
-          ]
-        }));
-        setSelectedChopId(region.id);
-      }
     });
     regions.on('region-updated', (region) => {
       updateChopRegion(region.id, region.start, region.end);
@@ -100,11 +87,16 @@ export function useWaveformEditor({
       setSelectedChopId(region.id);
       region.play();
     });
-    regions.enableDragSelection({
-      color: 'rgba(20, 184, 166, 0.18)'
-    });
+    const scrollElement = getWaveformScrollElement(wavesurfer);
+    const handleScroll = () => {
+      syncTimelineMetrics(wavesurfer);
+    };
+    const removeClickSeek = scrollElement ? addClickOnlySeek(scrollElement, wavesurfer, setCurrentTime) : undefined;
+    scrollElement?.addEventListener('scroll', handleScroll);
 
     return () => {
+      scrollElement?.removeEventListener('scroll', handleScroll);
+      removeClickSeek?.();
       wavesurfer.destroy();
       wavesurferRef.current = null;
       regionsRef.current = null;
@@ -113,8 +105,20 @@ export function useWaveformEditor({
   }, [detail?.id]);
 
   useEffect(() => {
+    wavesurferRef.current?.setOptions({ autoScroll: autoScrollPlayhead });
+  }, [autoScrollPlayhead]);
+
+  useEffect(() => {
     if (isWaveformReady) {
-      wavesurferRef.current?.zoom(zoom);
+      const wavesurfer = wavesurferRef.current;
+      if (wavesurfer) {
+        try {
+          wavesurfer.zoom(zoom);
+        } catch {
+          return;
+        }
+        syncTimelineMetrics(wavesurfer);
+      }
     }
   }, [isWaveformReady, zoom]);
 
@@ -162,12 +166,24 @@ export function useWaveformEditor({
     }));
   }
 
+  function syncTimelineMetrics(wavesurfer: WaveSurfer): void {
+    const scrollElement = getWaveformScrollElement(wavesurfer);
+
+    if (!scrollElement) {
+      return;
+    }
+
+    setTimelineScrollLeft(scrollElement.scrollLeft);
+    setTimelineWidth(getWaveformTimelineWidth(wavesurfer));
+  }
+
   function togglePlayback() {
     void wavesurferRef.current?.playPause();
   }
 
   return {
     currentTime,
+    autoScrollPlayhead,
     isPlaying,
     loopSelected,
     refs: {
@@ -177,8 +193,89 @@ export function useWaveformEditor({
       regionMapRef
     },
     setLoopSelected,
+    setAutoScrollPlayhead,
     setZoom,
+    timelineScrollLeft,
+    timelineWidth,
     togglePlayback,
     zoom
   };
+}
+
+function getWaveformScrollElement(wavesurfer: WaveSurfer): HTMLElement | null {
+  const wrapper = wavesurfer.getWrapper();
+
+  return wrapper.parentElement;
+}
+
+function getWaveformTimelineWidth(wavesurfer: WaveSurfer): number {
+  const scrollElement = getWaveformScrollElement(wavesurfer);
+
+  return Math.max(scrollElement?.scrollWidth ?? 1, 1);
+}
+
+function addClickOnlySeek(
+  scrollElement: HTMLElement,
+  wavesurfer: WaveSurfer,
+  setCurrentTime: (time: number) => void
+): () => void {
+  const dragThreshold = 4;
+  let pointerStart: { id: number; x: number; y: number; scrollLeft: number } | null = null;
+
+  const handlePointerDown = (event: PointerEvent) => {
+    if (event.button !== 0 || isRegionEvent(event)) {
+      pointerStart = null;
+      return;
+    }
+
+    pointerStart = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      scrollLeft: scrollElement.scrollLeft
+    };
+  };
+
+  const handlePointerUp = (event: PointerEvent) => {
+    if (!pointerStart || event.pointerId !== pointerStart.id || isRegionEvent(event)) {
+      pointerStart = null;
+      return;
+    }
+
+    const moved = Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y);
+    const scrolled = Math.abs(scrollElement.scrollLeft - pointerStart.scrollLeft);
+    const isClick = moved <= dragThreshold && scrolled <= dragThreshold;
+
+    if (isClick) {
+      const scrollRect = scrollElement.getBoundingClientRect();
+      const timelineX = scrollElement.scrollLeft + event.clientX - scrollRect.left;
+      const percent = Math.max(0, Math.min(1, timelineX / Math.max(scrollElement.scrollWidth, 1)));
+      const time = percent * wavesurfer.getDuration();
+
+      wavesurfer.setTime(time);
+      setCurrentTime(time);
+    }
+
+    pointerStart = null;
+  };
+
+  const handlePointerCancel = () => {
+    pointerStart = null;
+  };
+
+  scrollElement.addEventListener('pointerdown', handlePointerDown);
+  scrollElement.addEventListener('pointerup', handlePointerUp);
+  scrollElement.addEventListener('pointercancel', handlePointerCancel);
+
+  return () => {
+    scrollElement.removeEventListener('pointerdown', handlePointerDown);
+    scrollElement.removeEventListener('pointerup', handlePointerUp);
+    scrollElement.removeEventListener('pointercancel', handlePointerCancel);
+  };
+}
+
+function isRegionEvent(event: PointerEvent): boolean {
+  return event
+    .composedPath()
+    .some((target) => target instanceof HTMLElement && target.getAttribute('part')?.includes('region'));
 }

@@ -7,10 +7,14 @@ interface WaveformPanelProps {
   barBeat: { bar: number; beat: number } | null;
   currentTime: number;
   duration: number;
+  autoScrollPlayhead: boolean;
   isPlaying: boolean;
   ticks: BeatTick[];
+  timelineScrollLeft: number;
+  timelineWidth: number;
   waveformRef: RefObject<HTMLDivElement>;
   zoom: number;
+  onSetAutoScrollPlayhead: (enabled: boolean) => void;
   onSetZoom: (zoom: number) => void;
   onTogglePlayback: () => void;
   hasSource: boolean;
@@ -20,10 +24,14 @@ export function WaveformPanel({
   barBeat,
   currentTime,
   duration,
+  autoScrollPlayhead,
   isPlaying,
   ticks,
+  timelineScrollLeft,
+  timelineWidth,
   waveformRef,
   zoom,
+  onSetAutoScrollPlayhead,
   onSetZoom,
   onTogglePlayback,
   hasSource
@@ -33,7 +41,13 @@ export function WaveformPanel({
       <div className="waveform-wrap">
         <div ref={waveformRef} className="waveform" />
         {duration > 0 && (
-          <div className="waveform-overlay">
+          <div
+            className="waveform-overlay"
+            style={{
+              transform: `translateX(${-timelineScrollLeft}px)`,
+              width: `${timelineWidth}px`
+            }}
+          >
             <div className="centerline" />
             {ticks.map((tick) => (
               <span
@@ -60,6 +74,14 @@ export function WaveformPanel({
         <label>
           Zoom
           <input min="20" max="260" type="range" value={zoom} onChange={(event) => onSetZoom(Number(event.target.value))} />
+        </label>
+        <label className="checkbox-control">
+          <input
+            type="checkbox"
+            checked={autoScrollPlayhead}
+            onChange={(event) => onSetAutoScrollPlayhead(event.target.checked)}
+          />
+          Follow playhead
         </label>
       </div>
     </section>

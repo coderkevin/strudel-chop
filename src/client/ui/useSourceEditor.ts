@@ -70,6 +70,7 @@ export function useSourceEditor() {
       onImport: library.onImport,
       openSource,
       persist: library.persist,
+      setAutoScrollPlayhead: waveform.setAutoScrollPlayhead,
       setLoopSelected: waveform.setLoopSelected,
       setSelectedChopId,
       setZoom: waveform.setZoom,
@@ -80,6 +81,7 @@ export function useSourceEditor() {
       currentTime: waveform.currentTime,
       detail: library.detail,
       duration,
+      autoScrollPlayhead: waveform.autoScrollPlayhead,
       isBusy: library.isBusy,
       isPlaying: waveform.isPlaying,
       loopSelected: waveform.loopSelected,
@@ -89,6 +91,8 @@ export function useSourceEditor() {
       sources: library.sources,
       status: library.status,
       ticks,
+      timelineScrollLeft: waveform.timelineScrollLeft,
+      timelineWidth: waveform.timelineWidth,
       waveformRef: waveform.refs.waveformRef,
       zoom: waveform.zoom
     }

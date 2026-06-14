@@ -40,6 +40,19 @@ export function useChopActions({
 
     waveformRefs.regionMapRef.current.set(id, region);
     setSelectedChopId(id);
+    updateSourceMetadata((current) => ({
+      ...current,
+      chops: [
+        ...current.chops,
+        {
+          id,
+          name: `chop ${current.chops.length + 1}`,
+          start,
+          end,
+          order: current.chops.length
+        }
+      ]
+    }));
   }
 
   function moveChop(id: string, direction: -1 | 1) {
