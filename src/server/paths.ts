@@ -40,7 +40,7 @@ export function getLibraryPaths(root = getLibraryRoot()): LibraryPaths {
   };
 }
 
-export function sidecarPathForSource(sourcePath: string): string {
+export function metadataPathForSource(sourcePath: string): string {
   const parsed = path.parse(sourcePath);
 
   return path.join(parsed.dir, `${parsed.name}.strudel-chop.json`);

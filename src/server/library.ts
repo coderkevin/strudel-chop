@@ -4,12 +4,12 @@ import { nanoid } from 'nanoid';
 import type {
   LibraryConfig,
   SourceDetail,
-  SourceSidecar,
+  SourceMetadata,
   SourceSummary,
   StrudelSampleMap
 } from '../shared/types';
 import { exportWavSlice, probeAudio } from './audio';
-import { getLibraryPaths, sidecarPathForSource, sourceIdFromFile } from './paths';
+import { getLibraryPaths, metadataPathForSource, sourceIdFromFile } from './paths';
 
 const AUDIO_EXTENSIONS = new Set(['.mp3', '.flac', '.wav']);
 
@@ -56,7 +56,7 @@ export async function importSource(tempPath: string, originalName: string): Prom
   await fs.unlink(tempPath).catch(() => undefined);
 
   const metadata = await probeAudio(destination);
-  const sidecar: SourceSidecar = {
+  const sourceMetadata: SourceMetadata = {
     version: 1,
     sourceFile: fileName,
     originalName,
@@ -67,28 +67,28 @@ export async function importSource(tempPath: string, originalName: string): Prom
     chops: []
   };
 
-  await saveSidecar(sidecar);
+  await saveSourceMetadata(sourceMetadata);
 
-  return detailFromSidecar(sidecar);
+  return detailFromSourceMetadata(sourceMetadata);
 }
 
 export async function listSources(): Promise<SourceSummary[]> {
   const paths = getLibraryPaths();
   const entries = await fs.readdir(paths.sources).catch(() => []);
-  const sidecars = entries.filter((entry) => entry.endsWith('.strudel-chop.json'));
+  const metadataFiles = entries.filter((entry) => entry.endsWith('.strudel-chop.json'));
   const summaries = await Promise.all(
-    sidecars.map(async (entry) => {
-      const sidecar = await readSidecarByPath(path.join(paths.sources, entry));
-      const id = sourceIdFromFile(sidecar.sourceFile);
+    metadataFiles.map(async (entry) => {
+      const sourceMetadata = await readSourceMetadataByPath(path.join(paths.sources, entry));
+      const id = sourceIdFromFile(sourceMetadata.sourceFile);
 
       return {
         id,
-        sourceFile: sidecar.sourceFile,
-        originalName: sidecar.originalName,
-        soundName: sidecar.soundName,
-        duration: sidecar.metadata.duration,
-        chopCount: sidecar.chops.length,
-        importedAt: sidecar.importedAt
+        sourceFile: sourceMetadata.sourceFile,
+        originalName: sourceMetadata.originalName,
+        soundName: sourceMetadata.soundName,
+        duration: sourceMetadata.metadata.duration,
+        chopCount: sourceMetadata.chops.length,
+        importedAt: sourceMetadata.importedAt
       };
     })
   );
@@ -105,27 +105,27 @@ export async function getSource(id: string): Promise<SourceDetail> {
     throw new Error('Source not found.');
   }
 
-  const sidecar = await readSidecarByPath(sidecarPathForSource(path.join(paths.sources, sourceFile)));
+  const sourceMetadata = await readSourceMetadataByPath(metadataPathForSource(path.join(paths.sources, sourceFile)));
 
-  return detailFromSidecar(sidecar);
+  return detailFromSourceMetadata(sourceMetadata);
 }
 
-export async function saveSidecar(sidecar: SourceSidecar): Promise<SourceSidecar> {
+export async function saveSourceMetadata(sourceMetadata: SourceMetadata): Promise<SourceMetadata> {
   const paths = getLibraryPaths();
-  const fullPath = path.join(paths.sources, sidecar.sourceFile);
+  const fullPath = path.join(paths.sources, sourceMetadata.sourceFile);
 
-  await fs.writeFile(sidecarPathForSource(fullPath), `${JSON.stringify(sidecar, null, 2)}\n`, 'utf8');
+  await fs.writeFile(metadataPathForSource(fullPath), `${JSON.stringify(sourceMetadata, null, 2)}\n`, 'utf8');
 
-  return sidecar;
+  return sourceMetadata;
 }
 
-export async function exportSource(id: string): Promise<SourceSidecar> {
+export async function exportSource(id: string): Promise<SourceMetadata> {
   const paths = getLibraryPaths();
   const detail = await getSource(id);
-  const sidecar = detail.sidecar;
-  const sourcePath = path.join(paths.sources, sidecar.sourceFile);
-  const sortedChops = [...sidecar.chops].sort((a, b) => a.order - b.order);
-  const exportDir = path.join(paths.exports, sidecar.soundName);
+  const sourceMetadata = detail.sourceMetadata;
+  const sourcePath = path.join(paths.sources, sourceMetadata.sourceFile);
+  const sortedChops = [...sourceMetadata.chops].sort((a, b) => a.order - b.order);
+  const exportDir = path.join(paths.exports, sourceMetadata.soundName);
 
   await fs.rm(exportDir, { recursive: true, force: true });
   await fs.mkdir(exportDir, { recursive: true });
@@ -135,19 +135,19 @@ export async function exportSource(id: string): Promise<SourceSidecar> {
     const chop = sortedChops[index];
     const fileName = `${String(index).padStart(3, '0')}.wav`;
     await exportWavSlice(sourcePath, path.join(exportDir, fileName), chop.start, chop.end);
-    files.push(`${sidecar.soundName}/${fileName}`);
+    files.push(`${sourceMetadata.soundName}/${fileName}`);
   }
 
-  const updated: SourceSidecar = {
-    ...sidecar,
+  const updated: SourceMetadata = {
+    ...sourceMetadata,
     lastExport: {
       exportedAt: new Date().toISOString(),
-      soundName: sidecar.soundName,
+      soundName: sourceMetadata.soundName,
       files
     }
   };
 
-  await saveSidecar(updated);
+  await saveSourceMetadata(updated);
   await regenerateStrudelMap();
 
   return updated;
@@ -158,9 +158,9 @@ async function regenerateStrudelMap(): Promise<void> {
   const entries: Record<string, string[]> = {};
 
   for (const source of sources) {
-    const sidecar = (await getSource(source.id)).sidecar;
-    if (sidecar.lastExport?.files.length) {
-      entries[sidecar.lastExport.soundName] = sidecar.lastExport.files;
+    const sourceMetadata = (await getSource(source.id)).sourceMetadata;
+    if (sourceMetadata.lastExport?.files.length) {
+      entries[sourceMetadata.lastExport.soundName] = sourceMetadata.lastExport.files;
     }
   }
 
@@ -177,14 +177,14 @@ async function writeStrudelMap(entries: Record<string, string[]>): Promise<void>
   await fs.writeFile(paths.strudelMap, `${JSON.stringify(map, null, 2)}\n`, 'utf8');
 }
 
-async function readSidecarByPath(sidecarPath: string): Promise<SourceSidecar> {
-  return JSON.parse(await fs.readFile(sidecarPath, 'utf8')) as SourceSidecar;
+async function readSourceMetadataByPath(sourceMetadataPath: string): Promise<SourceMetadata> {
+  return JSON.parse(await fs.readFile(sourceMetadataPath, 'utf8')) as SourceMetadata;
 }
 
-function detailFromSidecar(sidecar: SourceSidecar): SourceDetail {
+function detailFromSourceMetadata(sourceMetadata: SourceMetadata): SourceDetail {
   return {
-    id: sourceIdFromFile(sidecar.sourceFile),
-    sourceUrl: `/sources/${encodeURIComponent(sidecar.sourceFile)}`,
-    sidecar
+    id: sourceIdFromFile(sourceMetadata.sourceFile),
+    sourceUrl: `/sources/${encodeURIComponent(sourceMetadata.sourceFile)}`,
+    sourceMetadata
   };
 }

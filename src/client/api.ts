@@ -1,4 +1,4 @@
-import type { SourceDetail, SourceSidecar, SourceSummary } from '../shared/types';
+import type { SourceDetail, SourceMetadata, SourceSummary } from '../shared/types';
 
 export async function listSources(): Promise<SourceSummary[]> {
   return fetchJson('/api/sources');
@@ -20,15 +20,15 @@ export async function importAudio(file: File): Promise<SourceDetail> {
   return readResponse(response);
 }
 
-export async function saveSource(id: string, sidecar: SourceSidecar): Promise<SourceSidecar> {
+export async function saveSource(id: string, sourceMetadata: SourceMetadata): Promise<SourceMetadata> {
   return fetchJson(`/api/sources/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(sidecar)
+    body: JSON.stringify(sourceMetadata)
   });
 }
 
-export async function exportSource(id: string): Promise<SourceSidecar> {
+export async function exportSource(id: string): Promise<SourceMetadata> {
   return fetchJson(`/api/sources/${encodeURIComponent(id)}/export`, {
     method: 'POST'
   });

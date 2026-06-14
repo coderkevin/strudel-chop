@@ -6,7 +6,7 @@ export interface LibraryConfig {
   exportsBaseUrl: string;
 }
 
-export interface SourceMetadata {
+export interface AudioMetadata {
   duration: number;
   formatName?: string;
   sampleRate?: number;
@@ -36,13 +36,13 @@ export interface LastExport {
   files: string[];
 }
 
-export interface SourceSidecar {
+export interface SourceMetadata {
   version: 1;
   sourceFile: string;
   originalName: string;
   importedAt: string;
   soundName: string;
-  metadata: SourceMetadata;
+  metadata: AudioMetadata;
   beatGrid: BeatGridSection[];
   chops: ChopRegion[];
   lastExport?: LastExport;
@@ -61,7 +61,7 @@ export interface SourceSummary {
 export interface SourceDetail {
   id: string;
   sourceUrl: string;
-  sidecar: SourceSidecar;
+  sourceMetadata: SourceMetadata;
 }
 
 export interface StrudelSampleMap {

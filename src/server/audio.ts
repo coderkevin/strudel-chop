@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import type { SourceMetadata } from '../shared/types';
+import type { AudioMetadata } from '../shared/types';
 
 function runCommand(command: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -21,7 +21,7 @@ function runCommand(command: string, args: string[]): Promise<string> {
   });
 }
 
-export async function probeAudio(filePath: string): Promise<SourceMetadata> {
+export async function probeAudio(filePath: string): Promise<AudioMetadata> {
   const raw = await runCommand('ffprobe', [
     '-v',
     'error',

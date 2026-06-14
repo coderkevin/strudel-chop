@@ -62,7 +62,7 @@ By default, Strudel Chop creates a local library at:
 ./strudel-chop-library
 ```
 
-That folder is gitignored because it contains copied source audio, sidecar metadata, and exported WAV files.
+That folder is gitignored because it contains copied source audio, source metadata, and exported WAV files.
 
 You can choose another library folder:
 
