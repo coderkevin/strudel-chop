@@ -1,0 +1,328 @@
+:root {
+  color: #17202a;
+  background: #f5f7fa;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  color: #17202a;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 7px;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 11px;
+}
+
+button:hover:not(:disabled) {
+  border-color: #14b8a6;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: #ffffff;
+  border-right: 1px solid #d8e0e8;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+}
+
+.brand {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.brand h1,
+.toolbar h2,
+.panel h3 {
+  margin: 0;
+}
+
+.brand h1 {
+  font-size: 20px;
+}
+
+.import-button {
+  align-items: center;
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.import-button input {
+  display: none;
+}
+
+.source-list,
+.section-list,
+.chop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.source,
+.chop {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+  height: auto;
+  justify-content: flex-start;
+  padding: 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.source span,
+.chop span:last-child {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.source.active,
+.chop.active,
+.active-toggle {
+  border-color: #0f766e;
+  background: #ecfeff;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.toolbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toolbar p {
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.toolbar-actions,
+.button-row,
+.transport {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.waveform-panel,
+.panel {
+  background: #ffffff;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+}
+
+.waveform-panel {
+  overflow: hidden;
+}
+
+.waveform-wrap {
+  min-height: 240px;
+  overflow-x: auto;
+  position: relative;
+}
+
+.waveform {
+  min-height: 220px;
+}
+
+.waveform-overlay {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.centerline {
+  background: rgba(23, 32, 42, 0.16);
+  height: 1px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 50%;
+}
+
+.tick {
+  bottom: 0;
+  position: absolute;
+  top: 0;
+  width: 1px;
+}
+
+.beat-tick {
+  background: rgba(59, 130, 246, 0.26);
+}
+
+.bar-tick {
+  background: rgba(20, 184, 166, 0.65);
+  width: 2px;
+}
+
+.playhead {
+  background: #ef4444;
+  bottom: 0;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.18);
+  position: absolute;
+  top: 0;
+  width: 2px;
+}
+
+.transport {
+  border-top: 1px solid #d8e0e8;
+  padding: 12px;
+}
+
+.transport label {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.readout {
+  background: #eef2f7;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  padding: 7px 9px;
+}
+
+.editor-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(360px, 1fr) minmax(360px, 1fr);
+}
+
+.panel {
+  padding: 14px;
+}
+
+.panel-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-card {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  padding: 10px;
+}
+
+.section-card label {
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.section-card input {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  min-height: 34px;
+  padding: 0 8px;
+}
+
+.chop-main {
+  align-items: center;
+  border: 0;
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  justify-content: stretch;
+  min-height: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.chop-main:hover {
+  border: 0;
+}
+
+.chop {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.chop .index {
+  color: #0f766e;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.reorder-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.reorder-buttons button {
+  min-height: 28px;
+  padding: 0 7px;
+}
+
+.empty,
+.status {
+  color: #64748b;
+}
+
+.status {
+  margin: 0;
+}
+
+@media (max-width: 1040px) {
+  .app-shell,
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-bottom: 1px solid #d8e0e8;
+    border-right: 0;
+  }
+}

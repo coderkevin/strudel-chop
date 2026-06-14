@@ -141,3 +141,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Strudel Chop local library and temporary uploads
+strudel-chop-library/
+.tmp-uploads/
