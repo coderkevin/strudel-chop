@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { BeatGridPanel } from './BeatGridPanel';
 import { ChopsPanel } from './ChopsPanel';
 import { EditorToolbar } from './EditorToolbar';
+import { SettingsPanel } from './SettingsPanel';
 import { SourceSidebar } from './SourceSidebar';
 import { WaveformPanel } from './WaveformPanel';
 import { useSourceEditor } from './useSourceEditor';
 
 export function App() {
   const { actions, state } = useSourceEditor();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
     <main className="app-shell">
@@ -24,7 +27,12 @@ export function App() {
           sourceMetadata={state.sourceMetadata}
           onExport={actions.exportCurrent}
           onSave={actions.persist}
+          onToggleSettings={() => setIsSettingsOpen((current) => !current)}
         />
+
+        {isSettingsOpen && (
+          <SettingsPanel tapLatencyMs={state.tapLatencyMs} onSetTapLatencyMs={actions.setTapLatencyMs} />
+        )}
 
         <WaveformPanel
           barBeat={state.barBeat}
@@ -43,18 +51,25 @@ export function App() {
           onTogglePlayback={actions.togglePlayback}
         />
 
-        <section className="editor-grid">
-          <BeatGridPanel
-            beatGrid={state.sourceMetadata?.beatGrid ?? []}
-            hasSource={Boolean(state.detail)}
-            onAddSection={actions.addSection}
-            onSetDownbeat={actions.setDownbeat}
-            onUpdateSection={actions.updateSection}
-          />
+        <BeatGridPanel
+          beatGrid={state.sourceMetadata?.beatGrid ?? []}
+          hasSource={Boolean(state.detail)}
+          taps={state.taps}
+          tapEstimatedBpm={state.tapEstimatedBpm}
+          onAddSection={actions.addSection}
+          onAddTap={actions.addBeatGridTap}
+          onApplyTappedDownbeats={actions.applyTappedDownbeats}
+          onClearTaps={actions.clearBeatGridTaps}
+          onDeleteSection={actions.deleteSection}
+          onSetFirstBeat={actions.setFirstBeat}
+          onUpdateSection={actions.updateSection}
+        />
 
+        <section className="editor-grid">
           <ChopsPanel
             chops={state.sourceMetadata?.chops ?? []}
             hasSource={Boolean(state.detail)}
+            isAuditioning={state.isAuditioningSelectedChop}
             loopSelected={state.loopSelected}
             selectedChop={state.selectedChop}
             selectedChopId={state.selectedChopId}
@@ -64,6 +79,7 @@ export function App() {
             onPlaySelectedChop={actions.playSelectedChop}
             onSelectChop={actions.setSelectedChopId}
             onSetLoopSelected={actions.setLoopSelected}
+            onUpdateChopName={actions.updateChopName}
           />
         </section>
 

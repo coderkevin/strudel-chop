@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react';
 import { currentBarBeat, generateBeatTicks } from '../../shared/beatGrid';
 import type { SourceMetadata } from '../../shared/types';
 import { useBeatGridActions } from './useBeatGridActions';
+import { useBeatGridTapper } from './useBeatGridTapper';
 import { useChopActions } from './useChopActions';
+import { useLibraryConfig } from './useLibraryConfig';
 import { useSourceLibrary } from './useSourceLibrary';
 import { useWaveformEditor } from './useWaveformEditor';
 
 export function useSourceEditor() {
   const library = useSourceLibrary();
+  const libraryConfig = useLibraryConfig();
   const [selectedChopId, setSelectedChopId] = useState<string | null>(null);
   const sourceMetadata = library.detail?.sourceMetadata ?? null;
   const duration = sourceMetadata?.metadata.duration ?? 0;
@@ -41,14 +44,17 @@ export function useSourceEditor() {
     () => currentBarBeat(sourceMetadata?.beatGrid ?? [], waveform.currentTime),
     [sourceMetadata?.beatGrid, waveform.currentTime]
   );
+  const tapper = useBeatGridTapper(waveform.getCurrentTime, libraryConfig.config.tapLatencyMs);
   const beatGridActions = useBeatGridActions({
     barBeat,
     currentTime: waveform.currentTime,
+    sourceMetadata,
     updateSourceMetadata
   });
   const chopActions = useChopActions({
     currentTime: waveform.currentTime,
     duration,
+    ticks,
     selectedChopId,
     setSelectedChopId,
     sourceMetadata,
@@ -66,11 +72,15 @@ export function useSourceEditor() {
     actions: {
       ...beatGridActions,
       ...chopActions,
+      addBeatGridTap: tapper.addTap,
+      clearBeatGridTaps: tapper.clearTaps,
       exportCurrent: library.exportCurrent,
       onImport: library.onImport,
       openSource,
       persist: library.persist,
+      removeBeatGridTap: tapper.removeTap,
       setAutoScrollPlayhead: waveform.setAutoScrollPlayhead,
+      setTapLatencyMs: (tapLatencyMs: number) => libraryConfig.updateConfig({ tapLatencyMs }),
       setLoopSelected: waveform.setLoopSelected,
       setSelectedChopId,
       setZoom: waveform.setZoom,
@@ -82,14 +92,18 @@ export function useSourceEditor() {
       detail: library.detail,
       duration,
       autoScrollPlayhead: waveform.autoScrollPlayhead,
-      isBusy: library.isBusy,
+      isAuditioningSelectedChop: chopActions.isAuditioningSelectedChop,
+      isBusy: library.isBusy || libraryConfig.isConfigBusy,
       isPlaying: waveform.isPlaying,
       loopSelected: waveform.loopSelected,
       selectedChop,
       selectedChopId,
       sourceMetadata,
+      tapLatencyMs: libraryConfig.config.tapLatencyMs,
       sources: library.sources,
       status: library.status,
+      tapEstimatedBpm: tapper.estimatedBpm,
+      taps: tapper.taps,
       ticks,
       timelineScrollLeft: waveform.timelineScrollLeft,
       timelineWidth: waveform.timelineWidth,

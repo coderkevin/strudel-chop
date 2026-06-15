@@ -1,10 +1,11 @@
-import { ArrowDown, ArrowUp, Play, Plus, Repeat, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Pause, Play, Plus, Repeat, Trash2 } from 'lucide-react';
 import type { ChopRegion } from '../../shared/types';
 import { formatTime } from './formatTime';
 
 interface ChopsPanelProps {
   chops: ChopRegion[];
   hasSource: boolean;
+  isAuditioning: boolean;
   loopSelected: boolean;
   selectedChop?: ChopRegion;
   selectedChopId: string | null;
@@ -14,11 +15,13 @@ interface ChopsPanelProps {
   onPlaySelectedChop: () => void;
   onSelectChop: (id: string) => void;
   onSetLoopSelected: (enabled: boolean) => void;
+  onUpdateChopName: (id: string, name: string) => void;
 }
 
 export function ChopsPanel({
   chops,
   hasSource,
+  isAuditioning,
   loopSelected,
   selectedChop,
   selectedChopId,
@@ -27,7 +30,8 @@ export function ChopsPanel({
   onMoveChop,
   onPlaySelectedChop,
   onSelectChop,
-  onSetLoopSelected
+  onSetLoopSelected,
+  onUpdateChopName
 }: ChopsPanelProps) {
   const orderedChops = [...chops].sort((a, b) => a.order - b.order);
 
@@ -40,8 +44,13 @@ export function ChopsPanel({
             <Plus size={15} />
             New chop
           </button>
-          <button type="button" onClick={onPlaySelectedChop} disabled={!selectedChop}>
-            <Play size={15} />
+          <button
+            className={isAuditioning ? 'active-toggle' : ''}
+            type="button"
+            onClick={onPlaySelectedChop}
+            disabled={!selectedChop}
+          >
+            {isAuditioning ? <Pause size={15} /> : <Play size={15} />}
             Audition
           </button>
           <button
@@ -64,11 +73,17 @@ export function ChopsPanel({
           <div className={selectedChopId === chop.id ? 'chop active' : 'chop'} key={chop.id}>
             <button className="chop-main" type="button" onClick={() => onSelectChop(chop.id)}>
               <span className="index">{String(index).padStart(3, '0')}</span>
-              <span>{chop.name}</span>
               <span>
                 {formatTime(chop.start)} - {formatTime(chop.end)}
               </span>
             </button>
+            <input
+              aria-label={`Chop ${index + 1} name`}
+              className="chop-name-input"
+              value={chop.name}
+              onChange={(event) => onUpdateChopName(chop.id, event.target.value)}
+              onFocus={() => onSelectChop(chop.id)}
+            />
             <div className="reorder-buttons">
               <button type="button" title="Move up" onClick={() => onMoveChop(chop.id, -1)} disabled={index === 0}>
                 <ArrowUp size={14} />

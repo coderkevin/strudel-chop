@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.esm.js';
+import { generateBeatTicks, type BeatTick } from '../../shared/beatGrid';
 import type { ChopRegion, SourceDetail, SourceMetadata } from '../../shared/types';
 import type { SourceMetadataUpdater } from './editorTypes';
 
@@ -34,10 +35,40 @@ export function useWaveformEditor({
   const regionsRef = useRef<RegionsPlugin | null>(null);
   const regionMapRef = useRef<Map<string, Region>>(new Map());
   const sourceMetadataRef = useRef<SourceMetadata | null>(null);
+  const beatTicksRef = useRef<BeatTick[]>([]);
+  const isShiftPressedRef = useRef(false);
+  const isSnappingRegionRef = useRef(false);
 
   useEffect(() => {
     sourceMetadataRef.current = sourceMetadata;
+    beatTicksRef.current = generateBeatTicks(sourceMetadata?.beatGrid ?? [], sourceMetadata?.metadata.duration ?? 0);
   }, [sourceMetadata]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        isShiftPressedRef.current = true;
+      }
+    };
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        isShiftPressedRef.current = false;
+      }
+    };
+    const handleBlur = () => {
+      isShiftPressedRef.current = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
 
   useEffect(() => {
     if (!waveformRef.current || !detail) {
@@ -79,7 +110,11 @@ export function useWaveformEditor({
     regions.on('region-created', (region) => {
       regionMapRef.current.set(region.id, region);
     });
-    regions.on('region-updated', (region) => {
+    regions.on('region-update', (region, side) => {
+      snapRegion(region, side);
+    });
+    regions.on('region-updated', (region, side) => {
+      snapRegion(region, side);
       updateChopRegion(region.id, region.start, region.end);
     });
     regions.on('region-clicked', (region, event) => {
@@ -166,6 +201,21 @@ export function useWaveformEditor({
     }));
   }
 
+  function snapRegion(region: Region, side?: 'start' | 'end') {
+    if (isShiftPressedRef.current || isSnappingRegionRef.current || !beatTicksRef.current.length) {
+      return;
+    }
+
+    const snapped = snapRegionBounds(region.start, region.end, side, beatTicksRef.current);
+    if (Math.abs(snapped.start - region.start) < 0.0001 && Math.abs(snapped.end - region.end) < 0.0001) {
+      return;
+    }
+
+    isSnappingRegionRef.current = true;
+    region.setOptions(snapped);
+    isSnappingRegionRef.current = false;
+  }
+
   function syncTimelineMetrics(wavesurfer: WaveSurfer): void {
     const scrollElement = getWaveformScrollElement(wavesurfer);
 
@@ -179,6 +229,10 @@ export function useWaveformEditor({
 
   function togglePlayback() {
     void wavesurferRef.current?.playPause();
+  }
+
+  function getCurrentTime() {
+    return wavesurferRef.current?.getCurrentTime() ?? currentTime;
   }
 
   return {
@@ -195,6 +249,7 @@ export function useWaveformEditor({
     setLoopSelected,
     setAutoScrollPlayhead,
     setZoom,
+    getCurrentTime,
     timelineScrollLeft,
     timelineWidth,
     togglePlayback,
@@ -212,6 +267,35 @@ function getWaveformTimelineWidth(wavesurfer: WaveSurfer): number {
   const scrollElement = getWaveformScrollElement(wavesurfer);
 
   return Math.max(scrollElement?.scrollWidth ?? 1, 1);
+}
+
+function snapRegionBounds(
+  start: number,
+  end: number,
+  side: 'start' | 'end' | undefined,
+  ticks: BeatTick[]
+): { start: number; end: number } {
+  const duration = Math.max(0.01, end - start);
+
+  if (side === 'start') {
+    const snappedStart = Math.min(nearestBeatTime(start, ticks), end - 0.01);
+    return { start: snappedStart, end };
+  }
+
+  if (side === 'end') {
+    const snappedEnd = Math.max(nearestBeatTime(end, ticks), start + 0.01);
+    return { start, end: snappedEnd };
+  }
+
+  const snappedStart = nearestBeatTime(start, ticks);
+
+  return { start: snappedStart, end: snappedStart + duration };
+}
+
+function nearestBeatTime(time: number, ticks: BeatTick[]): number {
+  return ticks.reduce((nearest, tick) =>
+    Math.abs(tick.time - time) < Math.abs(nearest - time) ? tick.time : nearest
+  , ticks[0]?.time ?? time);
 }
 
 function addClickOnlySeek(

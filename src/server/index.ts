@@ -3,7 +3,16 @@ import express from 'express';
 import multer from 'multer';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
-import { exportSource, getSource, importSource, listSources, saveSourceMetadata, ensureLibrary } from './library';
+import {
+  exportSource,
+  getLibraryConfig,
+  getSource,
+  importSource,
+  listSources,
+  saveLibraryConfig,
+  saveSourceMetadata,
+  ensureLibrary
+} from './library';
 import { getLibraryPaths, getPort } from './paths';
 
 const upload = multer({ dest: path.join(process.cwd(), '.tmp-uploads') });
@@ -21,6 +30,8 @@ async function main(): Promise<void> {
   app.use('/', express.static(paths.exports));
 
   app.get('/api/health', getHealth);
+  app.get('/api/config', getConfig);
+  app.put('/api/config', putConfig);
   app.get('/api/sources', getSources);
   app.post('/api/sources', upload.single('audio'), postSource);
   app.get('/api/sources/:id', getSourceById);
@@ -41,6 +52,30 @@ async function main(): Promise<void> {
     console.log(`Strudel samples: http://localhost:${port}/`);
     console.log(`Library: ${paths.root}`);
   });
+}
+
+async function getConfig(
+  _request: express.Request,
+  response: express.Response,
+  next: express.NextFunction
+): Promise<void> {
+  try {
+    response.json(await getLibraryConfig());
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function putConfig(
+  request: express.Request,
+  response: express.Response,
+  next: express.NextFunction
+): Promise<void> {
+  try {
+    response.json(await saveLibraryConfig(request.body));
+  } catch (error) {
+    next(error);
+  }
 }
 
 function getHealth(_request: express.Request, response: express.Response): void {

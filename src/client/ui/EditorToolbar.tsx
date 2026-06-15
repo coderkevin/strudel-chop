@@ -1,4 +1,4 @@
-import { Download, Save } from 'lucide-react';
+import { Download, Save, Settings } from 'lucide-react';
 import type { SourceMetadata } from '../../shared/types';
 import { formatTime } from './formatTime';
 
@@ -8,9 +8,17 @@ interface EditorToolbarProps {
   sourceMetadata: SourceMetadata | null;
   onExport: () => void;
   onSave: () => void;
+  onToggleSettings: () => void;
 }
 
-export function EditorToolbar({ duration, isBusy, sourceMetadata, onExport, onSave }: EditorToolbarProps) {
+export function EditorToolbar({
+  duration,
+  isBusy,
+  sourceMetadata,
+  onExport,
+  onSave,
+  onToggleSettings
+}: EditorToolbarProps) {
   return (
     <header className="toolbar">
       <div>
@@ -22,6 +30,10 @@ export function EditorToolbar({ duration, isBusy, sourceMetadata, onExport, onSa
         </p>
       </div>
       <div className="toolbar-actions">
+        <button type="button" onClick={onToggleSettings}>
+          <Settings size={16} />
+          Settings
+        </button>
         <button type="button" onClick={onSave} disabled={!sourceMetadata || isBusy}>
           <Save size={16} />
           Save

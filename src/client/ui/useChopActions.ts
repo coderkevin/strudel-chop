@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react';
+import type { BeatTick } from '../../shared/beatGrid';
 import type { ChopRegion, SourceMetadata } from '../../shared/types';
 import type { SourceMetadataUpdater, WaveformEditorRefs } from './editorTypes';
 
 interface UseChopActionsOptions {
   currentTime: number;
   duration: number;
+  ticks: BeatTick[];
   selectedChopId: string | null;
   setSelectedChopId: (id: string | null) => void;
   sourceMetadata: SourceMetadata | null;
@@ -14,24 +17,54 @@ interface UseChopActionsOptions {
 export function useChopActions({
   currentTime,
   duration,
+  ticks,
   selectedChopId,
   setSelectedChopId,
   sourceMetadata,
   updateSourceMetadata,
   waveformRefs
 }: UseChopActionsOptions) {
+  const [auditioningChopId, setAuditioningChopId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const wavesurfer = waveformRefs.wavesurferRef.current;
+    const chop = sourceMetadata?.chops.find((candidate) => candidate.id === auditioningChopId);
+
+    if (!wavesurfer || !chop) {
+      return undefined;
+    }
+
+    const stopAudition = () => {
+      setAuditioningChopId(null);
+    };
+    const unsubscribeTimeUpdate = wavesurfer.on('timeupdate', (time) => {
+      if (time >= chop.end) {
+        wavesurfer.pause();
+        wavesurfer.setTime(chop.end);
+        setAuditioningChopId(null);
+      }
+    });
+    const unsubscribePause = wavesurfer.on('pause', stopAudition);
+
+    return () => {
+      unsubscribeTimeUpdate();
+      unsubscribePause();
+    };
+  }, [auditioningChopId, sourceMetadata?.chops, waveformRefs.wavesurferRef]);
+
   function addChopFromPlayhead() {
     if (!waveformRefs.regionsRef.current || !sourceMetadata) {
       return;
     }
 
     const id = crypto.randomUUID();
-    const start = Math.max(0, currentTime);
-    const end = Math.min(duration, start + 4);
+    const start = snapTime(Math.max(0, currentTime), ticks);
+    const end = snapTime(Math.min(duration, start + 4), ticks);
+    const safeEnd = Math.max(start + 0.01, Math.min(duration, end));
     const region = waveformRefs.regionsRef.current.addRegion({
       id,
       start,
-      end,
+      end: safeEnd,
       content: `${sourceMetadata.chops.length + 1}`,
       color: 'rgba(20, 184, 166, 0.24)',
       drag: true,
@@ -48,10 +81,17 @@ export function useChopActions({
           id,
           name: `chop ${current.chops.length + 1}`,
           start,
-          end,
+          end: safeEnd,
           order: current.chops.length
         }
       ]
+    }));
+  }
+
+  function updateChopName(id: string, name: string) {
+    updateSourceMetadata((current) => ({
+      ...current,
+      chops: current.chops.map((chop) => (chop.id === id ? { ...chop, name } : chop))
     }));
   }
 
@@ -69,6 +109,7 @@ export function useChopActions({
 
     waveformRefs.regionMapRef.current.get(selectedChopId)?.remove();
     waveformRefs.regionMapRef.current.delete(selectedChopId);
+    setAuditioningChopId((current) => (current === selectedChopId ? null : current));
     updateSourceMetadata((current) => ({
       ...current,
       chops: current.chops
@@ -85,16 +126,35 @@ export function useChopActions({
       return;
     }
 
+    if (auditioningChopId === chop.id) {
+      waveformRefs.wavesurferRef.current.pause();
+      setAuditioningChopId(null);
+      return;
+    }
+
     waveformRefs.wavesurferRef.current.setTime(chop.start);
+    setAuditioningChopId(chop.id);
     void waveformRefs.wavesurferRef.current.play();
   }
 
   return {
     addChopFromPlayhead,
     deleteSelectedChop,
+    isAuditioningSelectedChop: Boolean(selectedChopId && auditioningChopId === selectedChopId),
     moveChop,
-    playSelectedChop
+    playSelectedChop,
+    updateChopName
   };
+}
+
+function snapTime(time: number, ticks: BeatTick[]): number {
+  if (!ticks.length) {
+    return time;
+  }
+
+  return ticks.reduce((nearest, tick) =>
+    Math.abs(tick.time - time) < Math.abs(nearest - time) ? tick.time : nearest
+  , ticks[0].time);
 }
 
 function moveByDirection(chops: ChopRegion[], id: string, direction: -1 | 1): ChopRegion[] {

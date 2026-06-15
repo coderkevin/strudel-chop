@@ -4,6 +4,7 @@ export interface LibraryConfig {
   version: 1;
   createdAt: string;
   exportsBaseUrl: string;
+  tapLatencyMs: number;
 }
 
 export interface AudioMetadata {
@@ -18,8 +19,10 @@ export interface BeatGridSection {
   id: string;
   time: number;
   bar: number;
+  beat?: number;
   bpm: number;
   beatsPerBar: number;
+  beatUnit?: number;
 }
 
 export interface ChopRegion {

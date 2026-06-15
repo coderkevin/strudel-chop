@@ -14,7 +14,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -34,6 +35,16 @@ button {
 
 button:hover:not(:disabled) {
   border-color: #14b8a6;
+}
+
+.primary-action {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
+.primary-action:hover:not(:disabled) {
+  border-color: #115e59;
 }
 
 button:disabled {
@@ -138,6 +149,85 @@ button:disabled {
 .toolbar p {
   color: #64748b;
   margin: 4px 0 0;
+}
+
+.settings-panel {
+  background: #ffffff;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.settings-heading {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) minmax(150px, auto) auto;
+}
+
+.settings-heading h3 {
+  margin: 0;
+}
+
+.settings-heading p {
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.settings-heading label {
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.latency-input {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(82px, 1fr) auto;
+}
+
+.latency-input input {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  min-height: 36px;
+  padding: 0 8px;
+}
+
+.latency-input span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.calibration-grid {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  padding: 10px;
+}
+
+.calibration-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calibration-readout {
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  gap: 10px;
 }
 
 .toolbar-actions,
@@ -263,10 +353,48 @@ button:disabled {
   border-radius: 8px;
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   padding: 10px;
 }
 
+.tap-list {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(260px, 1fr);
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.tap-list-heading,
+.tap-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto auto auto auto;
+}
+
+.tap-list-heading {
+  color: #64748b;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.tap-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tap-controls label,
 .section-card label {
   color: #64748b;
   display: flex;
@@ -275,6 +403,7 @@ button:disabled {
   gap: 4px;
 }
 
+.tap-controls select,
 .section-card input {
   border: 1px solid #cbd5e1;
   border-radius: 6px;
@@ -282,11 +411,36 @@ button:disabled {
   padding: 0 8px;
 }
 
+.nudge-row {
+  align-items: end;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.nudge-row button {
+  min-height: 34px;
+  padding: 0 8px;
+}
+
+.time-signature-input {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(42px, 1fr) auto minmax(42px, 1fr);
+}
+
+.time-signature-input span {
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .chop-main {
   align-items: center;
   border: 0;
   display: grid;
-  grid-template-columns: 62px 1fr auto;
+  grid-template-columns: 62px 1fr;
   justify-content: stretch;
   min-height: 0;
   padding: 0;
@@ -300,7 +454,8 @@ button:disabled {
 .chop {
   align-items: center;
   display: grid;
-  grid-template-columns: 1fr auto;
+  gap: 8px;
+  grid-template-columns: minmax(190px, 1fr) minmax(140px, 1fr) auto;
 }
 
 .chop .index {
@@ -312,6 +467,14 @@ button:disabled {
 .reorder-buttons {
   display: flex;
   gap: 4px;
+}
+
+.chop-name-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  min-height: 34px;
+  padding: 0 8px;
+  width: 100%;
 }
 
 .reorder-buttons button {

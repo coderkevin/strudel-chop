@@ -24,7 +24,8 @@ export async function ensureLibrary(): Promise<void> {
     const config: LibraryConfig = {
       version: 1,
       createdAt: new Date().toISOString(),
-      exportsBaseUrl: '/'
+      exportsBaseUrl: '/',
+      tapLatencyMs: 0
     };
     await fs.writeFile(paths.config, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
   }
@@ -34,6 +35,29 @@ export async function ensureLibrary(): Promise<void> {
   } catch {
     await writeStrudelMap({});
   }
+}
+
+export async function getLibraryConfig(): Promise<LibraryConfig> {
+  const paths = getLibraryPaths();
+  const rawConfig = JSON.parse(await fs.readFile(paths.config, 'utf8')) as Partial<LibraryConfig>;
+
+  return normalizeLibraryConfig(rawConfig);
+}
+
+export async function saveLibraryConfig(config: LibraryConfig): Promise<LibraryConfig> {
+  const current = await getLibraryConfig();
+  const updated = normalizeLibraryConfig({
+    ...current,
+    ...config,
+    version: 1,
+    createdAt: current.createdAt,
+    exportsBaseUrl: config.exportsBaseUrl ?? current.exportsBaseUrl
+  });
+  const paths = getLibraryPaths();
+
+  await fs.writeFile(paths.config, `${JSON.stringify(updated, null, 2)}\n`, 'utf8');
+
+  return updated;
 }
 
 export async function importSource(tempPath: string, originalName: string): Promise<SourceDetail> {
@@ -186,5 +210,14 @@ function detailFromSourceMetadata(sourceMetadata: SourceMetadata): SourceDetail 
     id: sourceIdFromFile(sourceMetadata.sourceFile),
     sourceUrl: `/sources/${encodeURIComponent(sourceMetadata.sourceFile)}`,
     sourceMetadata
+  };
+}
+
+function normalizeLibraryConfig(config: Partial<LibraryConfig>): LibraryConfig {
+  return {
+    version: 1,
+    createdAt: config.createdAt ?? new Date().toISOString(),
+    exportsBaseUrl: config.exportsBaseUrl ?? '/',
+    tapLatencyMs: Number.isFinite(config.tapLatencyMs) ? config.tapLatencyMs ?? 0 : 0
   };
 }

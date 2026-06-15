@@ -1,4 +1,16 @@
-import type { SourceDetail, SourceMetadata, SourceSummary } from '../shared/types';
+import type { LibraryConfig, SourceDetail, SourceMetadata, SourceSummary } from '../shared/types';
+
+export async function getConfig(): Promise<LibraryConfig> {
+  return fetchJson('/api/config');
+}
+
+export async function saveConfig(config: LibraryConfig): Promise<LibraryConfig> {
+  return fetchJson('/api/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config)
+  });
+}
 
 export async function listSources(): Promise<SourceSummary[]> {
   return fetchJson('/api/sources');
