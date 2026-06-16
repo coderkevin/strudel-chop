@@ -39,9 +39,8 @@ export function useChopActions({
     };
     const unsubscribeTimeUpdate = wavesurfer.on('timeupdate', (time) => {
       if (time >= chop.end) {
-        wavesurfer.pause();
-        wavesurfer.setTime(chop.end);
         setAuditioningChopId(null);
+        wavesurfer.pause();
       }
     });
     const unsubscribePause = wavesurfer.on('pause', stopAudition);
@@ -121,10 +120,20 @@ export function useChopActions({
   }
 
   function playSelectedChop() {
-    const chop = sourceMetadata?.chops.find((candidate) => candidate.id === selectedChopId);
+    if (!selectedChopId) {
+      return;
+    }
+
+    auditionChop(selectedChopId);
+  }
+
+  function auditionChop(id: string) {
+    const chop = sourceMetadata?.chops.find((candidate) => candidate.id === id);
     if (!chop || !waveformRefs.wavesurferRef.current) {
       return;
     }
+
+    setSelectedChopId(id);
 
     if (auditioningChopId === chop.id) {
       waveformRefs.wavesurferRef.current.pause();
@@ -139,6 +148,7 @@ export function useChopActions({
 
   return {
     addChopFromPlayhead,
+    auditionChop,
     deleteSelectedChop,
     isAuditioningSelectedChop: Boolean(selectedChopId && auditioningChopId === selectedChopId),
     moveChop,

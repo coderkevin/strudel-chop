@@ -5,8 +5,21 @@ import { generateBeatTicks, type BeatTick } from '../../shared/beatGrid';
 import type { ChopRegion, SourceDetail, SourceMetadata } from '../../shared/types';
 import type { SourceMetadataUpdater } from './editorTypes';
 
+interface RegionDragState {
+  duration: number;
+  pointerCurrentX: number;
+  pointerStartX: number;
+  regionEnd: number;
+  regionId: string;
+  regionStart: number;
+  side?: 'start' | 'end';
+  timelineDuration: number;
+  timelineWidth: number;
+}
+
 interface UseWaveformEditorOptions {
   detail: SourceDetail | null;
+  onRegionClick: (id: string) => void;
   selectedChopId: string | null;
   setSelectedChopId: (id: string) => void;
   setStatus: (status: string) => void;
@@ -16,6 +29,7 @@ interface UseWaveformEditorOptions {
 
 export function useWaveformEditor({
   detail,
+  onRegionClick,
   selectedChopId,
   setSelectedChopId,
   setStatus,
@@ -36,6 +50,7 @@ export function useWaveformEditor({
   const regionMapRef = useRef<Map<string, Region>>(new Map());
   const sourceMetadataRef = useRef<SourceMetadata | null>(null);
   const beatTicksRef = useRef<BeatTick[]>([]);
+  const regionDragStateRef = useRef<RegionDragState | null>(null);
   const isShiftPressedRef = useRef(false);
   const isSnappingRegionRef = useRef(false);
 
@@ -109,6 +124,7 @@ export function useWaveformEditor({
 
     regions.on('region-created', (region) => {
       regionMapRef.current.set(region.id, region);
+      trackRegionDrag(region, wavesurfer);
     });
     regions.on('region-update', (region, side) => {
       snapRegion(region, side);
@@ -119,8 +135,7 @@ export function useWaveformEditor({
     });
     regions.on('region-clicked', (region, event) => {
       event.stopPropagation();
-      setSelectedChopId(region.id);
-      region.play();
+      onRegionClick(region.id);
     });
     const scrollElement = getWaveformScrollElement(wavesurfer);
     const handleScroll = () => {
@@ -206,7 +221,7 @@ export function useWaveformEditor({
       return;
     }
 
-    const snapped = snapRegionBounds(region.start, region.end, side, beatTicksRef.current);
+    const snapped = snapRegionBounds(region.start, region.end, side, beatTicksRef.current, regionDragStateRef.current);
     if (Math.abs(snapped.start - region.start) < 0.0001 && Math.abs(snapped.end - region.end) < 0.0001) {
       return;
     }
@@ -214,6 +229,61 @@ export function useWaveformEditor({
     isSnappingRegionRef.current = true;
     region.setOptions(snapped);
     isSnappingRegionRef.current = false;
+  }
+
+  function trackRegionDrag(region: Region, wavesurfer: WaveSurfer) {
+    const element = region.element;
+    if (!element) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) {
+        return;
+      }
+
+      const timelineWidth = element.parentElement?.getBoundingClientRect().width ?? 0;
+      if (timelineWidth <= 0) {
+        return;
+      }
+
+      regionDragStateRef.current = {
+        duration: Math.max(0.01, region.end - region.start),
+        pointerCurrentX: event.clientX,
+        pointerStartX: event.clientX,
+        regionEnd: region.end,
+        regionId: region.id,
+        regionStart: region.start,
+        side: getRegionResizeSide(event.target),
+        timelineDuration: wavesurfer.getDuration(),
+        timelineWidth
+      };
+    };
+    const handlePointerMove = (event: PointerEvent) => {
+      if (regionDragStateRef.current?.regionId === region.id) {
+        regionDragStateRef.current = {
+          ...regionDragStateRef.current,
+          pointerCurrentX: event.clientX
+        };
+      }
+    };
+    const clearDragState = () => {
+      if (regionDragStateRef.current?.regionId === region.id) {
+        regionDragStateRef.current = null;
+      }
+    };
+
+    element.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointermove', handlePointerMove, { capture: true });
+    window.addEventListener('pointerup', clearDragState);
+    window.addEventListener('pointercancel', clearDragState);
+    region.once('remove', () => {
+      element.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointermove', handlePointerMove, { capture: true });
+      window.removeEventListener('pointerup', clearDragState);
+      window.removeEventListener('pointercancel', clearDragState);
+      clearDragState();
+    });
   }
 
   function syncTimelineMetrics(wavesurfer: WaveSurfer): void {
@@ -235,6 +305,31 @@ export function useWaveformEditor({
     return wavesurferRef.current?.getCurrentTime() ?? currentTime;
   }
 
+  function scrollToTime(time: number) {
+    const wavesurfer = wavesurferRef.current;
+    if (!wavesurfer) {
+      return;
+    }
+
+    const scrollElement = getWaveformScrollElement(wavesurfer);
+    if (!scrollElement) {
+      return;
+    }
+
+    const duration = wavesurfer.getDuration();
+    if (duration <= 0) {
+      return;
+    }
+
+    const timelineX = (time / duration) * scrollElement.scrollWidth;
+    const targetScrollLeft = timelineX - scrollElement.clientWidth / 2;
+    scrollElement.scrollTo({
+      left: Math.max(0, targetScrollLeft),
+      behavior: 'smooth'
+    });
+    syncTimelineMetrics(wavesurfer);
+  }
+
   return {
     currentTime,
     autoScrollPlayhead,
@@ -250,6 +345,7 @@ export function useWaveformEditor({
     setAutoScrollPlayhead,
     setZoom,
     getCurrentTime,
+    scrollToTime,
     timelineScrollLeft,
     timelineWidth,
     togglePlayback,
@@ -273,9 +369,30 @@ function snapRegionBounds(
   start: number,
   end: number,
   side: 'start' | 'end' | undefined,
-  ticks: BeatTick[]
+  ticks: BeatTick[],
+  dragState: RegionDragState | null
 ): { start: number; end: number } {
   const duration = Math.max(0.01, end - start);
+
+  if (dragState) {
+    const timeDelta =
+      ((dragState.pointerCurrentX - dragState.pointerStartX) / dragState.timelineWidth) * dragState.timelineDuration;
+    const dragSide = dragState.side ?? side;
+
+    if (dragSide === 'start') {
+      const snappedStart = Math.min(nearestBeatTime(dragState.regionStart + timeDelta, ticks), dragState.regionEnd - 0.01);
+      return { start: snappedStart, end: dragState.regionEnd };
+    }
+
+    if (dragSide === 'end') {
+      const snappedEnd = Math.max(nearestBeatTime(dragState.regionEnd + timeDelta, ticks), dragState.regionStart + 0.01);
+      return { start: dragState.regionStart, end: snappedEnd };
+    }
+
+    const snappedStart = clampRegionStart(nearestBeatTime(dragState.regionStart + timeDelta, ticks), dragState.duration, dragState.timelineDuration);
+
+    return { start: snappedStart, end: snappedStart + dragState.duration };
+  }
 
   if (side === 'start') {
     const snappedStart = Math.min(nearestBeatTime(start, ticks), end - 0.01);
@@ -296,6 +413,26 @@ function nearestBeatTime(time: number, ticks: BeatTick[]): number {
   return ticks.reduce((nearest, tick) =>
     Math.abs(tick.time - time) < Math.abs(nearest - time) ? tick.time : nearest
   , ticks[0]?.time ?? time);
+}
+
+function clampRegionStart(start: number, duration: number, timelineDuration: number): number {
+  return Math.max(0, Math.min(start, Math.max(0, timelineDuration - duration)));
+}
+
+function getRegionResizeSide(target: EventTarget | null): 'start' | 'end' | undefined {
+  if (!(target instanceof Element)) {
+    return undefined;
+  }
+
+  if (target.closest('[part*="region-handle-left"]')) {
+    return 'start';
+  }
+
+  if (target.closest('[part*="region-handle-right"]')) {
+    return 'end';
+  }
+
+  return undefined;
 }
 
 function addClickOnlySeek(

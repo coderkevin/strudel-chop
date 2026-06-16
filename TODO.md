@@ -2,7 +2,6 @@
 
 ## Beat Grid and Chops
 
-- [ ] Fix beat snapping for chop regions. Snapping is not quite right during drag/resize, while Shift precision mode behaves correctly.
 - [ ] Add fade-in and fade-out controls for chops.
 
 ## Editing State
@@ -14,3 +13,7 @@
 ## Export
 
 - [ ] Test the Strudel export flow end to end.
+
+## UI
+
+- [ ] Dark mode!

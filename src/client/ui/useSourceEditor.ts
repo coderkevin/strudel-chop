@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { currentBarBeat, generateBeatTicks } from '../../shared/beatGrid';
 import type { SourceMetadata } from '../../shared/types';
 import { useBeatGridActions } from './useBeatGridActions';
@@ -12,6 +12,7 @@ export function useSourceEditor() {
   const library = useSourceLibrary();
   const libraryConfig = useLibraryConfig();
   const [selectedChopId, setSelectedChopId] = useState<string | null>(null);
+  const auditionChopRef = useRef<(id: string) => void>(() => undefined);
   const sourceMetadata = library.detail?.sourceMetadata ?? null;
   const duration = sourceMetadata?.metadata.duration ?? 0;
 
@@ -30,6 +31,7 @@ export function useSourceEditor() {
 
   const waveform = useWaveformEditor({
     detail: library.detail,
+    onRegionClick: (id) => auditionChopRef.current(id),
     selectedChopId,
     setSelectedChopId,
     setStatus: library.setStatus,
@@ -61,11 +63,20 @@ export function useSourceEditor() {
     updateSourceMetadata,
     waveformRefs: waveform.refs
   });
+  auditionChopRef.current = chopActions.auditionChop;
   const selectedChop = sourceMetadata?.chops.find((chop) => chop.id === selectedChopId);
 
   async function openSource(id: string) {
     setSelectedChopId(null);
     await library.openSource(id);
+  }
+
+  function selectChop(id: string) {
+    setSelectedChopId(id);
+    const chop = sourceMetadata?.chops.find((candidate) => candidate.id === id);
+    if (chop) {
+      waveform.scrollToTime(chop.start);
+    }
   }
 
   return {
@@ -82,7 +93,7 @@ export function useSourceEditor() {
       setAutoScrollPlayhead: waveform.setAutoScrollPlayhead,
       setTapLatencyMs: (tapLatencyMs: number) => libraryConfig.updateConfig({ tapLatencyMs }),
       setLoopSelected: waveform.setLoopSelected,
-      setSelectedChopId,
+      setSelectedChopId: selectChop,
       setZoom: waveform.setZoom,
       togglePlayback: waveform.togglePlayback
     },
