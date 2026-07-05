@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BeatTick } from '../../shared/beatGrid';
 import type { ChopRegion, SourceMetadata } from '../../shared/types';
 import type { SourceMetadataUpdater, WaveformEditorRefs } from './editorTypes';
@@ -25,6 +25,7 @@ export function useChopActions({
   waveformRefs
 }: UseChopActionsOptions) {
   const [auditioningChopId, setAuditioningChopId] = useState<string | null>(null);
+  const auditionBaseVolumeRef = useRef(1);
 
   useEffect(() => {
     const wavesurfer = waveformRefs.wavesurferRef.current;
@@ -34,20 +35,24 @@ export function useChopActions({
       return undefined;
     }
 
+    let animationFrameId = 0;
+    const updateAuditionGain = () => {
+      wavesurfer.setVolume(auditionBaseVolumeRef.current * getAuditionGain(chop, wavesurfer.getCurrentTime()));
+      animationFrameId = window.requestAnimationFrame(updateAuditionGain);
+    };
     const stopAudition = () => {
+      window.cancelAnimationFrame(animationFrameId);
+      wavesurfer.setVolume(auditionBaseVolumeRef.current);
       setAuditioningChopId(null);
     };
-    const unsubscribeTimeUpdate = wavesurfer.on('timeupdate', (time) => {
-      if (time >= chop.end) {
-        setAuditioningChopId(null);
-        wavesurfer.pause();
-      }
-    });
     const unsubscribePause = wavesurfer.on('pause', stopAudition);
 
+    updateAuditionGain();
+
     return () => {
-      unsubscribeTimeUpdate();
+      window.cancelAnimationFrame(animationFrameId);
       unsubscribePause();
+      wavesurfer.setVolume(auditionBaseVolumeRef.current);
     };
   }, [auditioningChopId, sourceMetadata?.chops, waveformRefs.wavesurferRef]);
 
@@ -81,6 +86,8 @@ export function useChopActions({
           name: `chop ${current.chops.length + 1}`,
           start,
           end: safeEnd,
+          fadeIn: 0,
+          fadeOut: 0,
           order: current.chops.length
         }
       ]
@@ -91,6 +98,39 @@ export function useChopActions({
     updateSourceMetadata((current) => ({
       ...current,
       chops: current.chops.map((chop) => (chop.id === id ? { ...chop, name } : chop))
+    }));
+  }
+
+  function updateChopFade(id: string, patch: Pick<Partial<ChopRegion>, 'fadeIn' | 'fadeOut'>) {
+    updateSourceMetadata((current) => ({
+      ...current,
+      chops: current.chops.map((chop) =>
+        chop.id === id
+          ? {
+              ...chop,
+              ...normalizeFadePatch(chop, patch)
+            }
+          : chop
+      )
+    }));
+  }
+
+  function updateChopBounds(id: string, patch: Pick<Partial<ChopRegion>, 'start' | 'end'>) {
+    updateSourceMetadata((current) => ({
+      ...current,
+      chops: current.chops.map((chop) => {
+        if (chop.id !== id) {
+          return chop;
+        }
+
+        const updated = normalizeChopBounds(chop, patch, duration);
+        waveformRefs.regionMapRef.current.get(id)?.setOptions({
+          start: updated.start,
+          end: updated.end
+        });
+
+        return updated;
+      })
     }));
   }
 
@@ -136,14 +176,17 @@ export function useChopActions({
     setSelectedChopId(id);
 
     if (auditioningChopId === chop.id) {
+      waveformRefs.wavesurferRef.current.setVolume(0);
       waveformRefs.wavesurferRef.current.pause();
-      setAuditioningChopId(null);
       return;
     }
 
-    waveformRefs.wavesurferRef.current.setTime(chop.start);
+    auditionBaseVolumeRef.current = waveformRefs.wavesurferRef.current.getVolume();
+    waveformRefs.wavesurferRef.current.setVolume(
+      auditionBaseVolumeRef.current * getAuditionGain(chop, chop.start)
+    );
     setAuditioningChopId(chop.id);
-    void waveformRefs.wavesurferRef.current.play();
+    void waveformRefs.wavesurferRef.current.play(chop.start, chop.end);
   }
 
   return {
@@ -153,8 +196,69 @@ export function useChopActions({
     isAuditioningSelectedChop: Boolean(selectedChopId && auditioningChopId === selectedChopId),
     moveChop,
     playSelectedChop,
+    updateChopBounds,
+    updateChopFade,
     updateChopName
   };
+}
+
+function normalizeChopBounds(
+  chop: ChopRegion,
+  patch: Pick<Partial<ChopRegion>, 'start' | 'end'>,
+  duration: number
+): ChopRegion {
+  const nextStart = patch.start === undefined ? chop.start : clampTime(patch.start, duration);
+  const nextEnd = patch.end === undefined ? chop.end : clampTime(patch.end, duration);
+  const start = Math.min(nextStart, nextEnd - 0.01);
+  const end = Math.max(nextEnd, start + 0.01);
+  const nextChop = {
+    ...chop,
+    start: Math.max(0, start),
+    end: Math.min(duration, end)
+  };
+  const safeFade = normalizeFadePatch(nextChop, {
+    fadeIn: nextChop.fadeIn,
+    fadeOut: nextChop.fadeOut
+  });
+
+  return { ...nextChop, ...safeFade };
+}
+
+function clampTime(value: number, duration: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(value, duration));
+}
+
+function normalizeFadePatch(chop: ChopRegion, patch: Pick<Partial<ChopRegion>, 'fadeIn' | 'fadeOut'>) {
+  const duration = Math.max(0, chop.end - chop.start);
+
+  return {
+    fadeIn: patch.fadeIn === undefined ? chop.fadeIn : clampFade(patch.fadeIn, duration),
+    fadeOut: patch.fadeOut === undefined ? chop.fadeOut : clampFade(patch.fadeOut, duration)
+  };
+}
+
+function clampFade(value: number, duration: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(value, duration));
+}
+
+function getAuditionGain(chop: ChopRegion, time: number): number {
+  const duration = Math.max(0.01, chop.end - chop.start);
+  const fadeIn = clampFade(chop.fadeIn ?? 0, duration);
+  const fadeOut = clampFade(chop.fadeOut ?? 0, duration);
+  const elapsed = Math.max(0, time - chop.start);
+  const remaining = Math.max(0, chop.end - time);
+  const fadeInGain = fadeIn > 0 ? Math.min(1, elapsed / fadeIn) : 1;
+  const fadeOutGain = fadeOut > 0 ? Math.min(1, remaining / fadeOut) : 1;
+
+  return Math.max(0, Math.min(1, fadeInGain, fadeOutGain));
 }
 
 function snapTime(time: number, ticks: BeatTick[]): number {

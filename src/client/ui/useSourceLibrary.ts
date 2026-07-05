@@ -1,16 +1,40 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { exportSource, getSource, importAudio, listSources, saveSource } from '../api';
-import type { SourceDetail, SourceSummary } from '../../shared/types';
+import type { SourceDetail, SourceMetadata, SourceSummary } from '../../shared/types';
+
+function serializeSourceMetadata(sourceMetadata: SourceMetadata | null): string {
+  return sourceMetadata ? JSON.stringify(sourceMetadata) : '';
+}
 
 export function useSourceLibrary() {
   const [sources, setSources] = useState<SourceSummary[]>([]);
   const [detail, setDetail] = useState<SourceDetail | null>(null);
+  const [savedSourceMetadataSnapshot, setSavedSourceMetadataSnapshot] = useState('');
   const [status, setStatus] = useState('Ready');
   const [isBusy, setIsBusy] = useState(false);
+  const currentSourceMetadataSnapshot = useMemo(
+    () => serializeSourceMetadata(detail?.sourceMetadata ?? null),
+    [detail?.sourceMetadata]
+  );
+  const hasUnsavedChanges = Boolean(detail && currentSourceMetadataSnapshot !== savedSourceMetadataSnapshot);
 
   const refreshSources = useCallback(async () => {
     setSources(await listSources());
   }, []);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return undefined;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     refreshSources().catch((error) => setStatus(error.message));
@@ -19,7 +43,9 @@ export function useSourceLibrary() {
   async function openSource(id: string) {
     setIsBusy(true);
     try {
-      setDetail(await getSource(id));
+      const opened = await getSource(id);
+      setDetail(opened);
+      setSavedSourceMetadataSnapshot(serializeSourceMetadata(opened.sourceMetadata));
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Failed to open source.');
     } finally {
@@ -36,6 +62,7 @@ export function useSourceLibrary() {
     try {
       const imported = await importAudio(file);
       setDetail(imported);
+      setSavedSourceMetadataSnapshot(serializeSourceMetadata(imported.sourceMetadata));
       await refreshSources();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Import failed.');
@@ -53,6 +80,7 @@ export function useSourceLibrary() {
     try {
       const saved = await saveSource(detail.id, detail.sourceMetadata);
       setDetail({ ...detail, sourceMetadata: saved });
+      setSavedSourceMetadataSnapshot(serializeSourceMetadata(saved));
       await refreshSources();
       setStatus('Saved source metadata.');
     } catch (error) {
@@ -72,6 +100,7 @@ export function useSourceLibrary() {
       await saveSource(detail.id, detail.sourceMetadata);
       const exported = await exportSource(detail.id);
       setDetail({ ...detail, sourceMetadata: exported });
+      setSavedSourceMetadataSnapshot(serializeSourceMetadata(exported));
       await refreshSources();
       setStatus(`Exported ${exported.lastExport?.files.length ?? 0} chops for ${exported.soundName}.`);
     } catch (error) {
@@ -84,6 +113,7 @@ export function useSourceLibrary() {
   return {
     detail,
     exportCurrent,
+    hasUnsavedChanges,
     isBusy,
     onImport,
     openSource,

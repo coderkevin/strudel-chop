@@ -158,7 +158,7 @@ export async function exportSource(id: string): Promise<SourceMetadata> {
   for (let index = 0; index < sortedChops.length; index += 1) {
     const chop = sortedChops[index];
     const fileName = `${String(index).padStart(3, '0')}.wav`;
-    await exportWavSlice(sourcePath, path.join(exportDir, fileName), chop.start, chop.end);
+    await exportWavSlice(sourcePath, path.join(exportDir, fileName), chop.start, chop.end, chop.fadeIn, chop.fadeOut);
     files.push(`${sourceMetadata.soundName}/${fileName}`);
   }
 

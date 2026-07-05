@@ -46,8 +46,17 @@ export async function probeAudio(filePath: string): Promise<AudioMetadata> {
   };
 }
 
-export async function exportWavSlice(inputPath: string, outputPath: string, start: number, end: number): Promise<void> {
-  await runCommand('ffmpeg', [
+export async function exportWavSlice(
+  inputPath: string,
+  outputPath: string,
+  start: number,
+  end: number,
+  fadeIn = 0,
+  fadeOut = 0
+): Promise<void> {
+  const duration = Math.max(0, end - start);
+  const filters = buildFadeFilters(duration, fadeIn, fadeOut);
+  const args = [
     '-y',
     '-ss',
     start.toFixed(6),
@@ -58,7 +67,39 @@ export async function exportWavSlice(inputPath: string, outputPath: string, star
     '-acodec',
     'pcm_s16le',
     '-ar',
-    '44100',
-    outputPath
-  ]);
+    '44100'
+  ];
+
+  if (filters.length) {
+    args.push('-af', filters.join(','));
+  }
+
+  args.push(outputPath);
+
+  await runCommand('ffmpeg', args);
+}
+
+function buildFadeFilters(duration: number, fadeIn: number, fadeOut: number): string[] {
+  const safeFadeIn = clampFadeDuration(fadeIn, duration);
+  const safeFadeOut = clampFadeDuration(fadeOut, duration);
+  const filters: string[] = [];
+
+  if (safeFadeIn > 0) {
+    filters.push(`afade=t=in:st=0:d=${safeFadeIn.toFixed(6)}`);
+  }
+
+  if (safeFadeOut > 0) {
+    const fadeOutStart = Math.max(0, duration - safeFadeOut);
+    filters.push(`afade=t=out:st=${fadeOutStart.toFixed(6)}:d=${safeFadeOut.toFixed(6)}`);
+  }
+
+  return filters;
+}
+
+function clampFadeDuration(value: number, duration: number): number {
+  if (!Number.isFinite(value) || value <= 0 || duration <= 0) {
+    return 0;
+  }
+
+  return Math.min(value, duration);
 }

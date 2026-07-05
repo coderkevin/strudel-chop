@@ -30,6 +30,8 @@ export interface ChopRegion {
   name: string;
   start: number;
   end: number;
+  fadeIn?: number;
+  fadeOut?: number;
   order: number;
 }
 

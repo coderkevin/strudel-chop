@@ -66,9 +66,37 @@ export function useSourceEditor() {
   auditionChopRef.current = chopActions.auditionChop;
   const selectedChop = sourceMetadata?.chops.find((chop) => chop.id === selectedChopId);
 
+  function confirmDiscardChanges() {
+    return !library.hasUnsavedChanges || window.confirm('Discard unsaved changes?');
+  }
+
   async function openSource(id: string) {
+    if (id === library.detail?.id) {
+      return;
+    }
+
+    if (!confirmDiscardChanges()) {
+      return;
+    }
+
     setSelectedChopId(null);
     await library.openSource(id);
+  }
+
+  async function onImport(file: File | undefined) {
+    if (!file || !confirmDiscardChanges()) {
+      return;
+    }
+
+    setSelectedChopId(null);
+    await library.onImport(file);
+  }
+
+  function updateSourceNames(patch: Pick<Partial<SourceMetadata>, 'originalName' | 'soundName'>) {
+    updateSourceMetadata((current) => ({
+      ...current,
+      ...patch
+    }));
   }
 
   function selectChop(id: string) {
@@ -86,7 +114,7 @@ export function useSourceEditor() {
       addBeatGridTap: tapper.addTap,
       clearBeatGridTaps: tapper.clearTaps,
       exportCurrent: library.exportCurrent,
-      onImport: library.onImport,
+      onImport,
       openSource,
       persist: library.persist,
       removeBeatGridTap: tapper.removeTap,
@@ -95,7 +123,8 @@ export function useSourceEditor() {
       setLoopSelected: waveform.setLoopSelected,
       setSelectedChopId: selectChop,
       setZoom: waveform.setZoom,
-      togglePlayback: waveform.togglePlayback
+      togglePlayback: waveform.togglePlayback,
+      updateSourceNames
     },
     state: {
       barBeat,
@@ -105,6 +134,7 @@ export function useSourceEditor() {
       autoScrollPlayhead: waveform.autoScrollPlayhead,
       isAuditioningSelectedChop: chopActions.isAuditioningSelectedChop,
       isBusy: library.isBusy || libraryConfig.isConfigBusy,
+      hasUnsavedChanges: library.hasUnsavedChanges,
       isPlaying: waveform.isPlaying,
       loopSelected: waveform.loopSelected,
       selectedChop,

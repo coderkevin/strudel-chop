@@ -99,8 +99,7 @@ button:disabled {
 }
 
 .source-list,
-.section-list,
-.chop-list {
+.section-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -118,8 +117,7 @@ button:disabled {
   width: 100%;
 }
 
-.source span,
-.chop span:last-child {
+.source span {
   color: #64748b;
   font-size: 12px;
 }
@@ -144,6 +142,35 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   gap: 16px;
+}
+
+.toolbar-title {
+  min-width: 0;
+}
+
+.toolbar-title.editing {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(180px, 0.9fr) auto;
+}
+
+.toolbar-title label {
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.toolbar-title input {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #17202a;
+  min-height: 36px;
+  min-width: 0;
+  padding: 0 8px;
 }
 
 .toolbar p {
@@ -436,26 +463,56 @@ button:disabled {
   font-weight: 700;
 }
 
-.chop-main {
+.chop-table {
+  --chop-grid: 56px minmax(140px, 0.9fr) minmax(180px, 1.25fr) 96px 96px 82px 82px auto;
+  display: grid;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.chop-table-header,
+.chop {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: var(--chop-grid);
+  min-width: 900px;
+}
+
+.chop-table-header {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.chop-index-button,
+.chop-range-button {
   align-items: center;
   border: 0;
-  display: grid;
-  grid-template-columns: 62px 1fr;
-  justify-content: stretch;
+  display: flex;
   min-height: 0;
   padding: 0;
   width: 100%;
 }
 
-.chop-main:hover {
+.chop-index-button {
+  justify-content: flex-start;
+}
+
+.chop-range-button {
+  color: #64748b;
+  font-size: 12px;
+  justify-content: flex-start;
+}
+
+.chop-index-button:hover,
+.chop-range-button:hover {
   border: 0;
 }
 
 .chop {
-  align-items: center;
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(190px, 1fr) minmax(140px, 1fr) auto;
+  padding: 10px;
 }
 
 .chop .index {
@@ -469,7 +526,9 @@ button:disabled {
   gap: 4px;
 }
 
-.chop-name-input {
+.chop-name-input,
+.chop-time-input,
+.chop-fade-input {
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   min-height: 34px;

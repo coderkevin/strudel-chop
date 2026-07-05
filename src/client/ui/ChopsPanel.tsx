@@ -15,6 +15,8 @@ interface ChopsPanelProps {
   onPlaySelectedChop: () => void;
   onSelectChop: (id: string) => void;
   onSetLoopSelected: (enabled: boolean) => void;
+  onUpdateChopBounds: (id: string, patch: Pick<Partial<ChopRegion>, 'start' | 'end'>) => void;
+  onUpdateChopFade: (id: string, patch: Pick<Partial<ChopRegion>, 'fadeIn' | 'fadeOut'>) => void;
   onUpdateChopName: (id: string, name: string) => void;
 }
 
@@ -31,6 +33,8 @@ export function ChopsPanel({
   onPlaySelectedChop,
   onSelectChop,
   onSetLoopSelected,
+  onUpdateChopBounds,
+  onUpdateChopFade,
   onUpdateChopName
 }: ChopsPanelProps) {
   const orderedChops = [...chops].sort((a, b) => a.order - b.order);
@@ -68,11 +72,25 @@ export function ChopsPanel({
           </button>
         </div>
       </div>
-      <div className="chop-list">
+      <div className="chop-table">
+        {orderedChops.length > 0 && (
+          <div className="chop-table-header">
+            <span>#</span>
+            <span>Range</span>
+            <span>Name</span>
+            <span>Start ms</span>
+            <span>End ms</span>
+            <span>Fade in</span>
+            <span>Fade out</span>
+            <span>Order</span>
+          </div>
+        )}
         {orderedChops.map((chop, index) => (
           <div className={selectedChopId === chop.id ? 'chop active' : 'chop'} key={chop.id}>
-            <button className="chop-main" type="button" onClick={() => onSelectChop(chop.id)}>
+            <button className="chop-index-button" type="button" onClick={() => onSelectChop(chop.id)}>
               <span className="index">{String(index).padStart(3, '0')}</span>
+            </button>
+            <button className="chop-range-button" type="button" onClick={() => onSelectChop(chop.id)}>
               <span>
                 {formatTime(chop.start)} - {formatTime(chop.end)}
               </span>
@@ -82,6 +100,46 @@ export function ChopsPanel({
               className="chop-name-input"
               value={chop.name}
               onChange={(event) => onUpdateChopName(chop.id, event.target.value)}
+              onFocus={() => onSelectChop(chop.id)}
+            />
+            <input
+              aria-label={`Chop ${index + 1} start offset`}
+              className="chop-time-input"
+              min="0"
+              step="1"
+              type="number"
+              value={Math.round(chop.start * 1000)}
+              onChange={(event) => onUpdateChopBounds(chop.id, { start: Number(event.target.value) / 1000 })}
+              onFocus={() => onSelectChop(chop.id)}
+            />
+            <input
+              aria-label={`Chop ${index + 1} end offset`}
+              className="chop-time-input"
+              min="0"
+              step="1"
+              type="number"
+              value={Math.round(chop.end * 1000)}
+              onChange={(event) => onUpdateChopBounds(chop.id, { end: Number(event.target.value) / 1000 })}
+              onFocus={() => onSelectChop(chop.id)}
+            />
+            <input
+              aria-label={`Chop ${index + 1} fade in`}
+              className="chop-fade-input"
+              min="0"
+              step="0.001"
+              type="number"
+              value={chop.fadeIn ?? 0}
+              onChange={(event) => onUpdateChopFade(chop.id, { fadeIn: Number(event.target.value) })}
+              onFocus={() => onSelectChop(chop.id)}
+            />
+            <input
+              aria-label={`Chop ${index + 1} fade out`}
+              className="chop-fade-input"
+              min="0"
+              step="0.001"
+              type="number"
+              value={chop.fadeOut ?? 0}
+              onChange={(event) => onUpdateChopFade(chop.id, { fadeOut: Number(event.target.value) })}
               onFocus={() => onSelectChop(chop.id)}
             />
             <div className="reorder-buttons">

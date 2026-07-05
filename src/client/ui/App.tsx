@@ -23,11 +23,13 @@ export function App() {
       <section className="workspace">
         <EditorToolbar
           duration={state.duration}
+          hasUnsavedChanges={state.hasUnsavedChanges}
           isBusy={state.isBusy}
           sourceMetadata={state.sourceMetadata}
           onExport={actions.exportCurrent}
           onSave={actions.persist}
           onToggleSettings={() => setIsSettingsOpen((current) => !current)}
+          onUpdateSourceNames={actions.updateSourceNames}
         />
 
         {isSettingsOpen && (
@@ -65,23 +67,23 @@ export function App() {
           onUpdateSection={actions.updateSection}
         />
 
-        <section className="editor-grid">
-          <ChopsPanel
-            chops={state.sourceMetadata?.chops ?? []}
-            hasSource={Boolean(state.detail)}
-            isAuditioning={state.isAuditioningSelectedChop}
-            loopSelected={state.loopSelected}
-            selectedChop={state.selectedChop}
-            selectedChopId={state.selectedChopId}
-            onAddChop={actions.addChopFromPlayhead}
-            onDeleteSelectedChop={actions.deleteSelectedChop}
-            onMoveChop={actions.moveChop}
-            onPlaySelectedChop={actions.playSelectedChop}
-            onSelectChop={actions.setSelectedChopId}
-            onSetLoopSelected={actions.setLoopSelected}
-            onUpdateChopName={actions.updateChopName}
-          />
-        </section>
+        <ChopsPanel
+          chops={state.sourceMetadata?.chops ?? []}
+          hasSource={Boolean(state.detail)}
+          isAuditioning={state.isAuditioningSelectedChop}
+          loopSelected={state.loopSelected}
+          selectedChop={state.selectedChop}
+          selectedChopId={state.selectedChopId}
+          onAddChop={actions.addChopFromPlayhead}
+          onDeleteSelectedChop={actions.deleteSelectedChop}
+          onMoveChop={actions.moveChop}
+          onPlaySelectedChop={actions.playSelectedChop}
+          onSelectChop={actions.setSelectedChopId}
+          onSetLoopSelected={actions.setLoopSelected}
+          onUpdateChopBounds={actions.updateChopBounds}
+          onUpdateChopFade={actions.updateChopFade}
+          onUpdateChopName={actions.updateChopName}
+        />
 
         <p className="status">{state.isBusy ? 'Working...' : state.status}</p>
       </section>

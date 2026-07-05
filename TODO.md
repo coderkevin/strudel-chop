@@ -1,14 +1,10 @@
 # TODO
 
-## Beat Grid and Chops
-
-- [ ] Add fade-in and fade-out controls for chops.
-
 ## Editing State
 
-- [ ] Add a navigation blocker when unsaved changes are present.
-- [ ] Disable or visually invalidate the Save button when there is nothing to save.
-- [ ] Add editing for the imported track display/name metadata.
+- [x] Add a navigation blocker when unsaved changes are present.
+- [x] Disable or visually invalidate the Save button when there is nothing to save.
+- [x] Add editing for the imported track display/name metadata.
 
 ## Export
 
@@ -17,3 +13,4 @@
 ## UI
 
 - [ ] Dark mode!
+- [ ] Make it look really good!
