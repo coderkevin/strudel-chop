@@ -8,6 +8,7 @@ import {
   exportSource,
   getLibraryConfig,
   getSource,
+  getStrudelMapForSound,
   importSource,
   listSources,
   saveLibraryConfig,
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
   app.use('/sources', express.static(paths.sources));
   app.use('/', express.static(paths.exports, { setHeaders: setNoStoreHeaders }));
   app.get('/', getStrudelMap);
+  app.get('/:soundName([a-zA-Z0-9_-]+)', getStrudelMapBySound);
 
   app.get('/api/health', getHealth);
   app.get('/api/config', getConfig);
@@ -88,6 +90,28 @@ function getHealth(_request: express.Request, response: express.Response): void 
 function getStrudelMap(_request: express.Request, response: express.Response): void {
   setNoStoreHeaders(response);
   response.sendFile(paths.strudelMap);
+}
+
+async function getStrudelMapBySound(
+  request: express.Request,
+  response: express.Response,
+  next: express.NextFunction
+): Promise<void> {
+  try {
+    const soundNameParam = request.params.soundName;
+    const soundName = Array.isArray(soundNameParam) ? soundNameParam[0] : soundNameParam;
+    const map = await getStrudelMapForSound(soundName);
+
+    if (!map) {
+      next();
+      return;
+    }
+
+    setNoStoreHeaders(response);
+    response.json(map);
+  } catch (error) {
+    next(error);
+  }
 }
 
 function setNoStoreHeaders(response: express.Response): void {

@@ -93,16 +93,22 @@ npm run dev -- --port 5440
 
 ## Use in Strudel
 
-After exporting, load the local sample root in Strudel:
+After exporting, load an individual exported sound in Strudel:
 
 ```js
-samples('http://localhost:5432/')
+samples('http://localhost:5432/my_sound')
 ```
 
 Then play the exported sound by index:
 
 ```js
 n("0 1 2 3").s("my_sound")
+```
+
+You can still load every exported sound at once from the sample root:
+
+```js
+samples('http://localhost:5432/')
 ```
 
 The exported files are written as:

@@ -146,6 +146,17 @@ export async function saveSourceMetadata(sourceMetadata: SourceMetadata): Promis
   return sourceMetadata;
 }
 
+export async function getStrudelMapForSound(soundName: string): Promise<StrudelSampleMap | undefined> {
+  const entries = await getExportedSampleEntries();
+  const files = entries[soundName];
+
+  if (!files) {
+    return undefined;
+  }
+
+  return createStrudelMap({ [soundName]: files });
+}
+
 export async function exportSource(id: string): Promise<SourceMetadata> {
   const paths = getLibraryPaths();
   const detail = await getSource(id);
@@ -205,6 +216,10 @@ export async function detectSourceChopKeys(id: string): Promise<SourceMetadata> 
 }
 
 async function regenerateStrudelMap(): Promise<void> {
+  await writeStrudelMap(await getExportedSampleEntries());
+}
+
+async function getExportedSampleEntries(): Promise<Record<string, string[]>> {
   const sources = await listSources();
   const entries: Record<string, string[]> = {};
 
@@ -218,18 +233,23 @@ async function regenerateStrudelMap(): Promise<void> {
     }
   }
 
-  await writeStrudelMap(entries);
+  return entries;
 }
 
 async function writeStrudelMap(entries: Record<string, string[]>): Promise<void> {
   const paths = getLibraryPaths();
+  const map = await createStrudelMap(entries);
+
+  await fs.writeFile(paths.strudelMap, `${JSON.stringify(map, null, 2)}\n`, 'utf8');
+}
+
+async function createStrudelMap(entries: Record<string, string[]>): Promise<StrudelSampleMap> {
   const config = await getLibraryConfig();
-  const map: StrudelSampleMap = {
+
+  return {
     _base: config.exportsBaseUrl,
     ...entries
   };
-
-  await fs.writeFile(paths.strudelMap, `${JSON.stringify(map, null, 2)}\n`, 'utf8');
 }
 
 async function readSourceMetadataByPath(sourceMetadataPath: string): Promise<SourceMetadata> {
