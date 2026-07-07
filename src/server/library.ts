@@ -10,7 +10,7 @@ import type {
 } from '../shared/types';
 import { exportWavSlice, probeAudio } from './audio';
 import { detectChopKey } from './keyDetection';
-import { getLibraryPaths, metadataPathForSource, sourceIdFromFile } from './paths';
+import { getLibraryPaths, getPort, metadataPathForSource, sourceIdFromFile } from './paths';
 
 const AUDIO_EXTENSIONS = new Set(['.mp3', '.flac', '.wav']);
 
@@ -25,7 +25,7 @@ export async function ensureLibrary(): Promise<void> {
     const config: LibraryConfig = {
       version: 1,
       createdAt: new Date().toISOString(),
-      exportsBaseUrl: '/',
+      exportsBaseUrl: getDefaultExportsBaseUrl(),
       tapLatencyMs: 0
     };
     await fs.writeFile(paths.config, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
@@ -36,6 +36,8 @@ export async function ensureLibrary(): Promise<void> {
   } catch {
     await writeStrudelMap({});
   }
+
+  await regenerateStrudelMap();
 }
 
 export async function getLibraryConfig(): Promise<LibraryConfig> {
@@ -209,7 +211,10 @@ async function regenerateStrudelMap(): Promise<void> {
   for (const source of sources) {
     const sourceMetadata = (await getSource(source.id)).sourceMetadata;
     if (sourceMetadata.lastExport?.files.length) {
-      entries[sourceMetadata.lastExport.soundName] = sourceMetadata.lastExport.files;
+      entries[sourceMetadata.lastExport.soundName] = versionExportFiles(
+        sourceMetadata.lastExport.files,
+        sourceMetadata.lastExport.exportedAt
+      );
     }
   }
 
@@ -218,8 +223,9 @@ async function regenerateStrudelMap(): Promise<void> {
 
 async function writeStrudelMap(entries: Record<string, string[]>): Promise<void> {
   const paths = getLibraryPaths();
+  const config = await getLibraryConfig();
   const map: StrudelSampleMap = {
-    _base: '/',
+    _base: config.exportsBaseUrl,
     ...entries
   };
 
@@ -242,7 +248,25 @@ function normalizeLibraryConfig(config: Partial<LibraryConfig>): LibraryConfig {
   return {
     version: 1,
     createdAt: config.createdAt ?? new Date().toISOString(),
-    exportsBaseUrl: config.exportsBaseUrl ?? '/',
+    exportsBaseUrl: normalizeExportsBaseUrl(config.exportsBaseUrl),
     tapLatencyMs: Number.isFinite(config.tapLatencyMs) ? config.tapLatencyMs ?? 0 : 0
   };
+}
+
+function normalizeExportsBaseUrl(exportsBaseUrl: string | undefined): string {
+  if (!exportsBaseUrl || exportsBaseUrl === '/') {
+    return getDefaultExportsBaseUrl();
+  }
+
+  return exportsBaseUrl.endsWith('/') ? exportsBaseUrl : `${exportsBaseUrl}/`;
+}
+
+function getDefaultExportsBaseUrl(): string {
+  return `http://localhost:${getPort()}/`;
+}
+
+function versionExportFiles(files: string[], exportedAt: string): string[] {
+  const version = encodeURIComponent(exportedAt);
+
+  return files.map((file) => `${file}?v=${version}`);
 }

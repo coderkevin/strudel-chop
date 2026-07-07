@@ -56,6 +56,8 @@ The Strudel sample root is:
 http://localhost:5432/
 ```
 
+That root serves the generated `strudel.json` sample map after export.
+
 By default, Strudel Chop creates a local library at:
 
 ```text

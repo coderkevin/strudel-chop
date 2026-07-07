@@ -28,7 +28,8 @@ async function main(): Promise<void> {
   app.use(cors());
   app.use(express.json({ limit: '8mb' }));
   app.use('/sources', express.static(paths.sources));
-  app.use('/', express.static(paths.exports));
+  app.use('/', express.static(paths.exports, { setHeaders: setNoStoreHeaders }));
+  app.get('/', getStrudelMap);
 
   app.get('/api/health', getHealth);
   app.get('/api/config', getConfig);
@@ -82,6 +83,15 @@ async function putConfig(
 
 function getHealth(_request: express.Request, response: express.Response): void {
   response.json({ ok: true, library: paths.root });
+}
+
+function getStrudelMap(_request: express.Request, response: express.Response): void {
+  setNoStoreHeaders(response);
+  response.sendFile(paths.strudelMap);
+}
+
+function setNoStoreHeaders(response: express.Response): void {
+  response.setHeader('Cache-Control', 'no-store, max-age=0');
 }
 
 async function getSources(
