@@ -464,7 +464,7 @@ button:disabled {
 }
 
 .chop-table {
-  --chop-grid: 56px minmax(140px, 0.9fr) minmax(180px, 1.25fr) 96px 96px 82px 82px auto;
+  --chop-grid: 56px minmax(140px, 0.9fr) minmax(180px, 1.25fr) minmax(108px, 0.7fr) 96px 96px 82px 82px auto;
   display: grid;
   gap: 6px;
   overflow-x: auto;
@@ -476,7 +476,7 @@ button:disabled {
   display: grid;
   gap: 8px;
   grid-template-columns: var(--chop-grid);
-  min-width: 900px;
+  min-width: 1020px;
 }
 
 .chop-table-header {
@@ -519,6 +519,22 @@ button:disabled {
   color: #0f766e;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+}
+
+.chop-key {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #17202a;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 34px;
+  padding: 0 8px;
+  width: 100%;
+}
+
+.chop-key-empty {
+  color: #64748b;
+  font-weight: 500;
 }
 
 .reorder-buttons {

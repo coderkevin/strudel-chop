@@ -46,6 +46,12 @@ export async function exportSource(id: string): Promise<SourceMetadata> {
   });
 }
 
+export async function detectSourceKeys(id: string): Promise<SourceMetadata> {
+  return fetchJson(`/api/sources/${encodeURIComponent(id)}/detect-keys`, {
+    method: 'POST'
+  });
+}
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   return readResponse(await fetch(url, init));
 }

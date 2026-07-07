@@ -9,6 +9,7 @@ import type {
   StrudelSampleMap
 } from '../shared/types';
 import { exportWavSlice, probeAudio } from './audio';
+import { detectChopKey } from './keyDetection';
 import { getLibraryPaths, metadataPathForSource, sourceIdFromFile } from './paths';
 
 const AUDIO_EXTENSIONS = new Set(['.mp3', '.flac', '.wav']);
@@ -173,6 +174,30 @@ export async function exportSource(id: string): Promise<SourceMetadata> {
 
   await saveSourceMetadata(updated);
   await regenerateStrudelMap();
+
+  return updated;
+}
+
+export async function detectSourceChopKeys(id: string): Promise<SourceMetadata> {
+  const paths = getLibraryPaths();
+  const detail = await getSource(id);
+  const sourceMetadata = detail.sourceMetadata;
+  const sourcePath = path.join(paths.sources, sourceMetadata.sourceFile);
+  const chops: SourceMetadata['chops'] = [];
+
+  for (const chop of sourceMetadata.chops) {
+    chops.push({
+      ...chop,
+      keyDetection: await detectChopKey(sourcePath, chop)
+    });
+  }
+
+  const updated: SourceMetadata = {
+    ...sourceMetadata,
+    chops
+  };
+
+  await saveSourceMetadata(updated);
 
   return updated;
 }

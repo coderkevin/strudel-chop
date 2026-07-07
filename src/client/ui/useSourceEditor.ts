@@ -113,6 +113,7 @@ export function useSourceEditor() {
       ...chopActions,
       addBeatGridTap: tapper.addTap,
       clearBeatGridTaps: tapper.clearTaps,
+      detectChopKeys: library.detectChopKeys,
       exportCurrent: library.exportCurrent,
       onImport,
       openSource,

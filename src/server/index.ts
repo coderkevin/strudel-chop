@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
 import {
+  detectSourceChopKeys,
   exportSource,
   getLibraryConfig,
   getSource,
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
   app.post('/api/sources', upload.single('audio'), postSource);
   app.get('/api/sources/:id', getSourceById);
   app.put('/api/sources/:id', putSourceMetadata);
+  app.post('/api/sources/:id/detect-keys', postSourceDetectKeys);
   app.post('/api/sources/:id/export', postSourceExport);
 
   const vite = await createViteServer({
@@ -153,6 +155,18 @@ async function postSourceExport(
 ): Promise<void> {
   try {
     response.json(await exportSource(getSourceId(request)));
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function postSourceDetectKeys(
+  request: express.Request,
+  response: express.Response,
+  next: express.NextFunction
+): Promise<void> {
+  try {
+    response.json(await detectSourceChopKeys(getSourceId(request)));
   } catch (error) {
     next(error);
   }

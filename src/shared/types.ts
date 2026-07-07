@@ -25,6 +25,25 @@ export interface BeatGridSection {
   beatUnit?: number;
 }
 
+export type MusicalScale = 'major' | 'minor';
+
+export type ChopKeyDetection =
+  | {
+      status: 'detected';
+      tonic: string;
+      scale: MusicalScale;
+      strength: number;
+      detectedAt: string;
+      source?: 'detected' | 'manual';
+    }
+  | {
+      status: 'no_clear_key';
+      reason: 'too_short' | 'low_confidence' | 'analysis_failed' | 'manual';
+      strength?: number;
+      detectedAt: string;
+      source?: 'detected' | 'manual';
+    };
+
 export interface ChopRegion {
   id: string;
   name: string;
@@ -32,6 +51,7 @@ export interface ChopRegion {
   end: number;
   fadeIn?: number;
   fadeOut?: number;
+  keyDetection?: ChopKeyDetection;
   order: number;
 }
 

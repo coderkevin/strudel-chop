@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import type { AudioMetadata } from '../shared/types';
 
-function runCommand(command: string, args: string[]): Promise<string> {
+function runCommandBuffer(command: string, args: string[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     const stdout: Buffer[] = [];
@@ -12,13 +12,17 @@ function runCommand(command: string, args: string[]): Promise<string> {
     child.on('error', reject);
     child.on('close', (code) => {
       if (code === 0) {
-        resolve(Buffer.concat(stdout).toString('utf8'));
+        resolve(Buffer.concat(stdout));
         return;
       }
 
       reject(new Error(Buffer.concat(stderr).toString('utf8') || `${command} exited ${code}`));
     });
   });
+}
+
+function runCommand(command: string, args: string[]): Promise<string> {
+  return runCommandBuffer(command, args).then((buffer) => buffer.toString('utf8'));
 }
 
 export async function probeAudio(filePath: string): Promise<AudioMetadata> {
@@ -77,6 +81,35 @@ export async function exportWavSlice(
   args.push(outputPath);
 
   await runCommand('ffmpeg', args);
+}
+
+export async function readMonoPcmSlice(
+  inputPath: string,
+  start: number,
+  end: number,
+  sampleRate = 44100
+): Promise<Float32Array> {
+  const raw = await runCommandBuffer('ffmpeg', [
+    '-v',
+    'error',
+    '-ss',
+    start.toFixed(6),
+    '-to',
+    end.toFixed(6),
+    '-i',
+    inputPath,
+    '-vn',
+    '-ac',
+    '1',
+    '-ar',
+    String(sampleRate),
+    '-f',
+    'f32le',
+    'pipe:1'
+  ]);
+  const arrayBuffer = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer;
+
+  return new Float32Array(arrayBuffer);
 }
 
 function buildFadeFilters(duration: number, fadeIn: number, fadeOut: number): string[] {

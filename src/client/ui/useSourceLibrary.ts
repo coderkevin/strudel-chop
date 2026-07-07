@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { exportSource, getSource, importAudio, listSources, saveSource } from '../api';
+import { detectSourceKeys, exportSource, getSource, importAudio, listSources, saveSource } from '../api';
 import type { SourceDetail, SourceMetadata, SourceSummary } from '../../shared/types';
 
 function serializeSourceMetadata(sourceMetadata: SourceMetadata | null): string {
@@ -110,7 +110,29 @@ export function useSourceLibrary() {
     }
   }
 
+  async function detectChopKeys() {
+    if (!detail) {
+      return;
+    }
+
+    setIsBusy(true);
+    try {
+      await saveSource(detail.id, detail.sourceMetadata);
+      const updated = await detectSourceKeys(detail.id);
+      const detectedCount = updated.chops.filter((chop) => chop.keyDetection?.status === 'detected').length;
+      setDetail({ ...detail, sourceMetadata: updated });
+      setSavedSourceMetadataSnapshot(serializeSourceMetadata(updated));
+      await refreshSources();
+      setStatus(`Detected keys for ${detectedCount} of ${updated.chops.length} chops.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Key detection failed.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   return {
+    detectChopKeys,
     detail,
     exportCurrent,
     hasUnsavedChanges,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BeatTick } from '../../shared/beatGrid';
-import type { ChopRegion, SourceMetadata } from '../../shared/types';
+import type { ChopKeyDetection, ChopRegion, SourceMetadata } from '../../shared/types';
 import type { SourceMetadataUpdater, WaveformEditorRefs } from './editorTypes';
 
 interface UseChopActionsOptions {
@@ -101,6 +101,13 @@ export function useChopActions({
     }));
   }
 
+  function updateChopKeyDetection(id: string, keyDetection: ChopKeyDetection | undefined) {
+    updateSourceMetadata((current) => ({
+      ...current,
+      chops: current.chops.map((chop) => (chop.id === id ? { ...chop, keyDetection } : chop))
+    }));
+  }
+
   function updateChopFade(id: string, patch: Pick<Partial<ChopRegion>, 'fadeIn' | 'fadeOut'>) {
     updateSourceMetadata((current) => ({
       ...current,
@@ -198,6 +205,7 @@ export function useChopActions({
     playSelectedChop,
     updateChopBounds,
     updateChopFade,
+    updateChopKeyDetection,
     updateChopName
   };
 }
@@ -214,7 +222,8 @@ function normalizeChopBounds(
   const nextChop = {
     ...chop,
     start: Math.max(0, start),
-    end: Math.min(duration, end)
+    end: Math.min(duration, end),
+    keyDetection: undefined
   };
   const safeFade = normalizeFadePatch(nextChop, {
     fadeIn: nextChop.fadeIn,

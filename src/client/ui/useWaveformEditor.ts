@@ -212,7 +212,7 @@ export function useWaveformEditor({
   function updateChopRegion(id: string, start: number, end: number) {
     updateSourceMetadata((current) => ({
       ...current,
-      chops: current.chops.map((chop) => (chop.id === id ? { ...chop, start, end } : chop))
+      chops: current.chops.map((chop) => (chop.id === id ? { ...chop, start, end, keyDetection: undefined } : chop))
     }));
   }
 

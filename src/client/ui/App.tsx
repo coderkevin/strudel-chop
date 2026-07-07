@@ -71,17 +71,20 @@ export function App() {
           chops={state.sourceMetadata?.chops ?? []}
           hasSource={Boolean(state.detail)}
           isAuditioning={state.isAuditioningSelectedChop}
+          isBusy={state.isBusy}
           loopSelected={state.loopSelected}
           selectedChop={state.selectedChop}
           selectedChopId={state.selectedChopId}
           onAddChop={actions.addChopFromPlayhead}
           onDeleteSelectedChop={actions.deleteSelectedChop}
+          onDetectChopKeys={actions.detectChopKeys}
           onMoveChop={actions.moveChop}
           onPlaySelectedChop={actions.playSelectedChop}
           onSelectChop={actions.setSelectedChopId}
           onSetLoopSelected={actions.setLoopSelected}
           onUpdateChopBounds={actions.updateChopBounds}
           onUpdateChopFade={actions.updateChopFade}
+          onUpdateChopKeyDetection={actions.updateChopKeyDetection}
           onUpdateChopName={actions.updateChopName}
         />
 
